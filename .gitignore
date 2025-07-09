@@ -295,3 +295,4 @@ docs/tasks/*
 CLAUDE.md
 GEMINI.md
 .cursor/
+final_review_gate.py

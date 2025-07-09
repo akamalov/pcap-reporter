@@ -21,8 +21,8 @@ services:
   # FastAPI backend service
   api:
     build:
-      context: .
-      dockerfile: ./backend/Dockerfile
+      context: ./backend
+      dockerfile: Dockerfile
     container_name: pcap-reporter-api
     environment:
       - ENVIRONMENT=production
@@ -52,8 +52,8 @@ services:
   # Celery worker for analysis tasks
   celery-worker:
     build:
-      context: .
-      dockerfile: ./backend/Dockerfile
+      context: ./backend
+      dockerfile: Dockerfile
     container_name: pcap-reporter-celery-worker
     command: celery -A main.celery worker --loglevel=info --concurrency=4
     environment:
@@ -76,8 +76,8 @@ services:
   # Celery beat for scheduled tasks
   celery-beat:
     build:
-      context: .
-      dockerfile: ./backend/Dockerfile
+      context: ./backend
+      dockerfile: Dockerfile
     container_name: pcap-reporter-celery-beat
     command: celery -A main.celery beat --loglevel=info
     environment:
@@ -100,8 +100,8 @@ services:
   # Flower for monitoring Celery tasks
   flower:
     build:
-      context: .
-      dockerfile: ./backend/Dockerfile
+      context: ./backend
+      dockerfile: Dockerfile
     container_name: pcap-reporter-flower
     command: celery -A main.celery flower --port=5555
     environment:
@@ -151,7 +151,7 @@ services:
     volumes:
       - redis_data:/data
     ports:
-      - "6379:6379"
+      - "6380:6379"
     restart: unless-stopped
     networks:
       - pcap-reporter-network
