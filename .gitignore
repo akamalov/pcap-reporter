@@ -293,3 +293,9 @@ nginx_logs/
 docs/planning/*
 docs/tasks/*
 
+
+# AI Assistant Files
+.claude/
+.gemini/
+CLAUDE.md
+GEMINI.md
