@@ -44,11 +44,6 @@ coverage.xml
 .hypothesis/
 .pytest_cache/
 cover/
-CLAUDE.md
-GEMINI.md
-.claude/
-.gemini/
-.cursor/
 
 # Translations
 *.mo
@@ -299,3 +294,4 @@ docs/tasks/*
 .gemini/
 CLAUDE.md
 GEMINI.md
+.cursor/

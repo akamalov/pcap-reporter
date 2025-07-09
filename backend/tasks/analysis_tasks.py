@@ -4,7 +4,7 @@ Celery tasks for PCAP analysis processing.
 
 import logging
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Dict, Any
 
 from celery import current_task
@@ -13,7 +13,7 @@ from celery.exceptions import Retry
 from core.celery_app import celery_app
 from models.report import Report, ReportStatus
 from models.analysis_job import AnalysisJob, JobStatus
-from services.pcap_analyzer import analyzer
+from services.pcap_analysis_service import PcapAnalysisService
 
 logger = logging.getLogger(__name__)
 
@@ -51,16 +51,16 @@ def analyze_pcap_file(self, report_id: str, file_path: str) -> Dict[str, Any]:
                 analysis_job = AnalysisJob(
                     job_id=task_id,
                     report_id=report_id,
-                    status=JobStatus.RUNNING,
+                    status=JobStatus.STARTED,  # Updated to use correct enum value
                     progress=0,
-                    message="Starting analysis..."
+                    current_step="Starting analysis..."
                 )
                 await analysis_job.save()
             
             # Progress callback to update job status
             async def progress_callback(progress: int, message: str):
                 analysis_job.progress = progress
-                analysis_job.message = message
+                analysis_job.current_step = message
                 analysis_job.updated_at = datetime.utcnow()
                 await analysis_job.save()
                 
@@ -74,19 +74,74 @@ def analyze_pcap_file(self, report_id: str, file_path: str) -> Dict[str, Any]:
                     }
                 )
             
-            # Perform the analysis
-            analysis_results = await analyzer.analyze_pcap(file_path, progress_callback)
+            # Initialize the new PCAP analysis service
+            analysis_service = PcapAnalysisService()
+            
+            # Update progress
+            await progress_callback(10, "Initializing analysis...")
+            
+            # Perform the analysis using the new service
+            await progress_callback(25, "Extracting basic statistics...")
+            analysis_results = await analysis_service.analyze_pcap_file(
+                file_path, 
+                options=getattr(analysis_job, 'options', {})
+            )
+            
+            await progress_callback(90, "Finalizing results...")
+            
+            # Convert AnalysisResults to the format expected by the Report model
+            # For now, we'll store the results as a dict until we update the Report model
+            results_dict = {
+                "file_path": analysis_results.file_path,
+                "file_size": analysis_results.file_size,
+                "analysis_timestamp": analysis_results.analysis_timestamp,
+                "traffic_stats": {
+                    "total_packets": analysis_results.traffic_stats.total_packets,
+                    "total_bytes": analysis_results.traffic_stats.total_bytes,
+                    "duration": analysis_results.traffic_stats.duration,
+                    "avg_packet_size": analysis_results.traffic_stats.avg_packet_size,
+                    "packets_per_second": analysis_results.traffic_stats.packets_per_second,
+                    "bytes_per_second": analysis_results.traffic_stats.bytes_per_second
+                },
+                "performance_metrics": {
+                    "avg_latency": analysis_results.performance_metrics.avg_latency,
+                    "max_latency": analysis_results.performance_metrics.max_latency,
+                    "packet_loss_rate": analysis_results.performance_metrics.packet_loss_rate,
+                    "throughput_mbps": analysis_results.performance_metrics.throughput_mbps
+                },
+                "protocol_stats": {
+                    "tcp_packets": analysis_results.protocol_stats.tcp_packets,
+                    "udp_packets": analysis_results.protocol_stats.udp_packets,
+                    "icmp_packets": analysis_results.protocol_stats.icmp_packets,
+                    "http_sessions": analysis_results.protocol_stats.http_sessions,
+                    "https_sessions": analysis_results.protocol_stats.https_sessions,
+                    "dns_queries": analysis_results.protocol_stats.dns_queries
+                },
+                "issues": [
+                    {
+                        "type": issue.type.value,
+                        "severity": issue.severity.value,
+                        "description": issue.description,
+                        "recommendation": issue.recommendation,
+                        "confidence": issue.confidence
+                    }
+                    for issue in analysis_results.issues
+                ],
+                "start_time": analysis_results.start_time,
+                "end_time": analysis_results.end_time,
+                "processing_time": analysis_results.processing_time
+            }
             
             # Update report with results
-            report.analysis_results = analysis_results
+            report.analysis_results = results_dict
             report.status = ReportStatus.COMPLETED
             report.completed_at = datetime.utcnow()
             await report.save()
             
             # Update analysis job
-            analysis_job.status = JobStatus.COMPLETED
+            analysis_job.status = JobStatus.SUCCESS
             analysis_job.progress = 100
-            analysis_job.message = "Analysis completed successfully"
+            analysis_job.current_step = "Analysis completed successfully"
             analysis_job.completed_at = datetime.utcnow()
             await analysis_job.save()
             
@@ -98,12 +153,12 @@ def analyze_pcap_file(self, report_id: str, file_path: str) -> Dict[str, Any]:
                 "task_id": task_id,
                 "message": "Analysis completed successfully",
                 "results_summary": {
-                    "total_packets": analysis_results.traffic_stats.get("total_packets", 0),
-                    "duration": analysis_results.traffic_stats.get("duration", 0),
-                    "unique_ips": analysis_results.traffic_stats.get("unique_ip_addresses", 0),
-                    "top_protocol": analysis_results.top_protocols[0].protocol if analysis_results.top_protocols else "Unknown",
-                    "issues_found": len(analysis_results.network_issues),
-                    "security_alerts": len(analysis_results.security_alerts)
+                    "total_packets": analysis_results.total_packets,
+                    "duration": analysis_results.duration,
+                    "unique_protocols": len([p for p in analysis_results.protocols.values() if p > 0]),
+                    "top_protocol": max(analysis_results.protocols.items(), key=lambda x: x[1])[0] if analysis_results.protocols else "Unknown",
+                    "issues_found": len(analysis_results.issues),
+                    "throughput_mbps": analysis_results.performance_metrics.throughput_mbps
                 }
             }
             
@@ -124,7 +179,7 @@ def analyze_pcap_file(self, report_id: str, file_path: str) -> Dict[str, Any]:
             try:
                 analysis_job = await AnalysisJob.find_one({"job_id": task_id})
                 if analysis_job:
-                    analysis_job.status = JobStatus.FAILED
+                    analysis_job.status = JobStatus.FAILURE
                     analysis_job.error_message = str(e)
                     analysis_job.updated_at = datetime.utcnow()
                     await analysis_job.save()
@@ -198,27 +253,29 @@ def cleanup_old_reports(self, days_old: int = 30) -> Dict[str, Any]:
                     logger.info(f"Cleaned up report: {report.id}")
                     
                 except Exception as e:
-                    error_msg = f"Failed to cleanup report {report.id}: {e}"
+                    error_msg = f"Error cleaning up report {report.id}: {e}"
                     logger.error(error_msg)
                     errors.append(error_msg)
             
-            logger.info(f"Cleanup completed: {cleaned_count} reports cleaned, {len(errors)} errors")
+            logger.info(f"Cleanup task {task_id} completed: {cleaned_count} reports cleaned")
             
             return {
                 "status": "completed",
                 "task_id": task_id,
                 "cleaned_count": cleaned_count,
-                "errors": errors,
-                "cutoff_date": cutoff_date.isoformat()
+                "errors": errors
             }
             
         except Exception as e:
             logger.error(f"Error in cleanup task {task_id}: {e}")
+            self.update_state(
+                state="FAILURE",
+                meta={"error": str(e), "task_id": task_id}
+            )
             raise
     
     # Run the async cleanup
     import asyncio
-    from datetime import timedelta
     try:
         return asyncio.run(run_cleanup())
     except Exception as e:
@@ -240,92 +297,73 @@ def validate_pcap_file(self, file_path: str) -> Dict[str, Any]:
     task_id = self.request.id
     logger.info(f"Starting PCAP validation task {task_id} for file {file_path}")
     
-    try:
-        # Check if file exists
-        if not os.path.exists(file_path):
-            raise FileNotFoundError(f"PCAP file not found: {file_path}")
-        
-        # Check file size
-        file_size = os.path.getsize(file_path)
-        if file_size == 0:
-            raise ValueError("PCAP file is empty")
-        
-        # Check if file is readable
+    async def run_validation():
         try:
-            with open(file_path, 'rb') as f:
-                # Read first few bytes to check file format
-                header = f.read(24)
-                if len(header) < 24:
-                    raise ValueError("PCAP file too small to contain valid header")
-                
-                # Check for PCAP magic numbers
-                magic_numbers = [
-                    b'\xd4\xc3\xb2\xa1',  # Standard PCAP
-                    b'\xa1\xb2\xc3\xd4',  # Standard PCAP (swapped)
-                    b'\x4d\x3c\xb2\xa1',  # PCAP-NG
-                    b'\xa1\xb2\x3c\x4d',  # PCAP-NG (swapped)
-                ]
-                
-                if not any(header.startswith(magic) for magic in magic_numbers):
-                    raise ValueError("File does not appear to be a valid PCAP file")
-        
-        except Exception as e:
-            raise ValueError(f"Failed to read PCAP file: {e}")
-        
-        # Try to validate with tshark if available
-        tshark_validation = None
-        try:
-            import subprocess
-            result = subprocess.run(
-                ["tshark", "-r", file_path, "-c", "1"],
-                capture_output=True,
-                text=True,
-                timeout=10
-            )
-            tshark_validation = {
-                "success": result.returncode == 0,
-                "output": result.stdout,
-                "error": result.stderr
+            # Initialize the analysis service for validation
+            analysis_service = PcapAnalysisService()
+            
+            # Validate the file
+            await analysis_service._validate_pcap_file(file_path)
+            
+            # Get basic file information
+            import os
+            from pathlib import Path
+            
+            file_info = Path(file_path)
+            file_size = file_info.stat().st_size
+            
+            logger.info(f"PCAP validation completed for file {file_path}")
+            
+            return {
+                "status": "valid",
+                "task_id": task_id,
+                "file_path": file_path,
+                "file_size": file_size,
+                "message": "File validation successful"
             }
+            
         except Exception as e:
-            logger.warning(f"tshark validation failed: {e}")
-        
-        logger.info(f"PCAP validation completed for {file_path}")
-        
-        return {
-            "status": "valid",
-            "task_id": task_id,
-            "file_path": file_path,
-            "file_size": file_size,
-            "tshark_validation": tshark_validation,
-            "message": "PCAP file is valid and ready for analysis"
-        }
-        
+            logger.error(f"Error in PCAP validation task {task_id}: {e}")
+            
+            self.update_state(
+                state="FAILURE",
+                meta={
+                    "error": str(e),
+                    "file_path": file_path,
+                    "task_id": task_id
+                }
+            )
+            
+            return {
+                "status": "invalid",
+                "task_id": task_id,
+                "file_path": file_path,
+                "error": str(e),
+                "message": "File validation failed"
+            }
+    
+    # Run the async validation
+    import asyncio
+    try:
+        return asyncio.run(run_validation())
     except Exception as e:
-        logger.error(f"PCAP validation failed for {file_path}: {e}")
-        
-        return {
-            "status": "invalid",
-            "task_id": task_id,
-            "file_path": file_path,
-            "error": str(e),
-            "message": "PCAP file validation failed"
-        }
+        logger.error(f"Failed to run validation task: {e}")
+        raise
 
 
 @celery_app.task(bind=True, name="generate_report_summary")
 def generate_report_summary(self, report_id: str) -> Dict[str, Any]:
     """
-    Generate an enhanced summary for a completed report.
+    Generate a summary for a completed analysis report.
     
     Args:
         report_id: ID of the report to summarize
         
     Returns:
-        Dict containing enhanced summary
+        Dict containing summary information
     """
     task_id = self.request.id
-    logger.info(f"Starting report summary task {task_id} for report {report_id}")
+    logger.info(f"Starting report summary generation task {task_id} for report {report_id}")
     
     async def run_summary():
         try:
@@ -334,115 +372,76 @@ def generate_report_summary(self, report_id: str) -> Dict[str, Any]:
             if not report:
                 raise ValueError(f"Report not found: {report_id}")
             
-            if report.status != ReportStatus.COMPLETED:
-                raise ValueError(f"Report is not completed: {report.status}")
-            
             if not report.analysis_results:
-                raise ValueError("No analysis results found")
+                raise ValueError(f"Report {report_id} has no analysis results")
             
-            # Generate enhanced summary
+            # Extract key metrics from analysis results
             results = report.analysis_results
+            traffic_stats = results.get("traffic_stats", {})
+            performance_metrics = results.get("performance_metrics", {})
+            protocol_stats = results.get("protocol_stats", {})
+            issues = results.get("issues", [])
             
-            # Traffic analysis
-            traffic_summary = {
-                "total_packets": results.traffic_stats.get("total_packets", 0),
-                "total_bytes": results.traffic_stats.get("total_bytes", 0),
-                "duration": results.traffic_stats.get("duration", 0),
-                "average_packet_size": 0,
-                "packets_per_second": 0
-            }
-            
-            if traffic_summary["total_packets"] > 0:
-                traffic_summary["average_packet_size"] = (
-                    traffic_summary["total_bytes"] / traffic_summary["total_packets"]
-                )
-            
-            if traffic_summary["duration"] > 0:
-                traffic_summary["packets_per_second"] = (
-                    traffic_summary["total_packets"] / traffic_summary["duration"]
-                )
-            
-            # Protocol analysis
-            protocol_summary = {
-                "total_protocols": len(results.top_protocols),
-                "dominant_protocol": results.top_protocols[0].protocol if results.top_protocols else "Unknown",
-                "protocol_diversity": 0.0  # Shannon entropy could be calculated here
-            }
-            
-            # Security analysis
-            security_summary = {
-                "total_alerts": len(results.security_alerts),
-                "alert_severity_distribution": {},
-                "total_issues": len(results.network_issues),
-                "issue_severity_distribution": {}
-            }
-            
-            # Count alert severities
-            for alert in results.security_alerts:
-                severity = alert.severity
-                security_summary["alert_severity_distribution"][severity] = (
-                    security_summary["alert_severity_distribution"].get(severity, 0) + 1
-                )
-            
-            # Count issue severities
-            for issue in results.network_issues:
-                severity = issue.severity
-                security_summary["issue_severity_distribution"][severity] = (
-                    security_summary["issue_severity_distribution"].get(severity, 0) + 1
-                )
-            
-            # DNS analysis
-            dns_summary = {
-                "total_queries": results.dns_analysis.get("total_queries", 0),
-                "unique_domains": results.dns_analysis.get("unique_domains", 0),
-                "top_domains": results.dns_analysis.get("top_queried_domains", [])[:5]
-            }
-            
-            # Host analysis
-            host_summary = {
-                "total_hosts": len(results.top_hosts),
-                "most_active_host": results.top_hosts[0].ip_address if results.top_hosts else "Unknown",
-                "internal_hosts": 0,
-                "external_hosts": 0
-            }
-            
-            # Classify hosts as internal/external (simple heuristic)
-            for host in results.top_hosts:
-                ip = host.ip_address
-                if (ip.startswith("10.") or ip.startswith("192.168.") or 
-                    ip.startswith("172.") or ip.startswith("127.")):
-                    host_summary["internal_hosts"] += 1
-                else:
-                    host_summary["external_hosts"] += 1
-            
-            enhanced_summary = {
+            # Generate summary
+            summary = {
                 "report_id": report_id,
-                "generated_at": datetime.utcnow().isoformat(),
-                "executive_summary": results.executive_summary,
-                "traffic_summary": traffic_summary,
-                "protocol_summary": protocol_summary,
-                "security_summary": security_summary,
-                "dns_summary": dns_summary,
-                "host_summary": host_summary,
+                "file_info": {
+                    "file_path": results.get("file_path", ""),
+                    "file_size": results.get("file_size", 0),
+                    "analysis_date": results.get("analysis_timestamp", "")
+                },
+                "traffic_overview": {
+                    "total_packets": traffic_stats.get("total_packets", 0),
+                    "total_bytes": traffic_stats.get("total_bytes", 0),
+                    "duration_seconds": traffic_stats.get("duration", 0),
+                    "avg_packet_size": traffic_stats.get("avg_packet_size", 0),
+                    "throughput_mbps": performance_metrics.get("throughput_mbps", 0)
+                },
+                "protocol_distribution": protocol_stats,
+                "performance_summary": {
+                    "avg_latency_ms": performance_metrics.get("avg_latency", 0) * 1000,
+                    "packet_loss_rate": performance_metrics.get("packet_loss_rate", 0),
+                    "quality_score": max(0, 100 - (performance_metrics.get("packet_loss_rate", 0) * 100))
+                },
+                "issues_summary": {
+                    "total_issues": len(issues),
+                    "critical_issues": len([i for i in issues if i.get("severity") == "critical"]),
+                    "high_issues": len([i for i in issues if i.get("severity") == "high"]),
+                    "medium_issues": len([i for i in issues if i.get("severity") == "medium"]),
+                    "low_issues": len([i for i in issues if i.get("severity") == "low"])
+                },
                 "recommendations": [
-                    "Monitor high-volume hosts for potential security issues",
-                    "Investigate any security alerts flagged in the analysis",
-                    "Review DNS queries to suspicious domains",
-                    "Analyze protocol distribution for anomalies"
-                ]
+                    issue.get("recommendation", "")
+                    for issue in issues
+                    if issue.get("recommendation") and issue.get("severity") in ["critical", "high"]
+                ][:5]  # Top 5 recommendations
             }
             
-            logger.info(f"Report summary generated for {report_id}")
+            # Update report with summary
+            report.summary = summary
+            await report.save()
+            
+            logger.info(f"Report summary generated for report {report_id}")
             
             return {
                 "status": "completed",
                 "task_id": task_id,
                 "report_id": report_id,
-                "summary": enhanced_summary
+                "summary": summary
             }
             
         except Exception as e:
-            logger.error(f"Error generating report summary {report_id}: {e}")
+            logger.error(f"Error in report summary task {task_id}: {e}")
+            
+            self.update_state(
+                state="FAILURE",
+                meta={
+                    "error": str(e),
+                    "report_id": report_id,
+                    "task_id": task_id
+                }
+            )
+            
             raise
     
     # Run the async summary generation
