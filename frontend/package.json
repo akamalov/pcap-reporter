@@ -1,0 +1,41 @@
+{
+  "name": "pcap-reporter-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "next": "14.0.4",
+    "react": "18.2.0",
+    "react-dom": "18.2.0",
+    "antd": "5.12.8",
+    "@ant-design/icons": "5.2.6",
+    "@ant-design/nextjs-registry": "1.0.0",
+    "axios": "1.6.2",
+    "swr": "2.2.4",
+    "dayjs": "1.11.10",
+    "recharts": "2.8.0",
+    "mermaid": "10.6.1",
+    "react-syntax-highlighter": "15.5.0",
+    "file-saver": "2.0.5",
+    "js-file-download": "0.4.12"
+  },
+  "devDependencies": {
+    "@types/node": "20.10.5",
+    "@types/react": "18.2.45",
+    "@types/react-dom": "18.2.18",
+    "@types/react-syntax-highlighter": "15.5.11",
+    "@types/file-saver": "2.0.7",
+    "eslint": "8.56.0",
+    "eslint-config-next": "14.0.4",
+    "typescript": "5.3.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+} 

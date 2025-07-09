@@ -1,0 +1,240 @@
+'use client'
+
+import React from 'react'
+import { Layout, Typography, Button, Card, Row, Col, Space, Divider } from 'antd'
+import { 
+  CloudUploadOutlined, 
+  FileTextOutlined, 
+  BarChartOutlined,
+  ShieldCheckOutlined,
+  NetworkOutlined,
+  RocketOutlined
+} from '@ant-design/icons'
+import Link from 'next/link'
+
+const { Header, Content, Footer } = Layout
+const { Title, Paragraph, Text } = Typography
+
+const features = [
+  {
+    icon: <CloudUploadOutlined className="text-blue-500" style={{ fontSize: '32px' }} />,
+    title: 'Easy Upload',
+    description: 'Drag and drop PCAP files for instant analysis. Supports all major PCAP formats.'
+  },
+  {
+    icon: <BarChartOutlined className="text-green-500" style={{ fontSize: '32px' }} />,
+    title: 'Detailed Analytics',
+    description: 'Comprehensive traffic analysis with protocol statistics, top talkers, and performance metrics.'
+  },
+  {
+    icon: <ShieldCheckOutlined className="text-red-500" style={{ fontSize: '32px' }} />,
+    title: 'Security Analysis',
+    description: 'Advanced security scanning to identify potential threats and network anomalies.'
+  },
+  {
+    icon: <NetworkOutlined className="text-purple-500" style={{ fontSize: '32px' }} />,
+    title: 'Network Topology',
+    description: 'Visual network diagrams showing communication patterns and logical connections.'
+  },
+  {
+    icon: <FileTextOutlined className="text-orange-500" style={{ fontSize: '32px' }} />,
+    title: 'Professional Reports',
+    description: 'Generate comprehensive PDF reports with executive summaries and technical details.'
+  },
+  {
+    icon: <RocketOutlined className="text-cyan-500" style={{ fontSize: '32px' }} />,
+    title: 'Fast Processing',
+    description: 'Hybrid analysis engine combining tshark and Scapy for optimal speed and accuracy.'
+  }
+]
+
+export default function HomePage() {
+  return (
+    <Layout className="min-h-screen">
+      {/* Header */}
+      <Header className="bg-slate-800 shadow-lg">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <NetworkOutlined className="text-white text-2xl" />
+            <Title level={3} className="text-white mb-0">
+              PCAP Reporter
+            </Title>
+          </div>
+          <Space>
+            <Link href="/upload">
+              <Button type="primary" icon={<CloudUploadOutlined />}>
+                Upload PCAP
+              </Button>
+            </Link>
+            <Link href="/reports">
+              <Button type="default" icon={<FileTextOutlined />}>
+                View Reports
+              </Button>
+            </Link>
+          </Space>
+        </div>
+      </Header>
+
+      {/* Main Content */}
+      <Content className="bg-gray-50">
+        {/* Hero Section */}
+        <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white py-20">
+          <div className="max-w-7xl mx-auto px-4 text-center">
+            <Title level={1} className="text-white mb-4">
+              Professional PCAP Analysis Made Simple
+            </Title>
+            <Paragraph className="text-xl text-blue-100 mb-8 max-w-3xl mx-auto">
+              Upload your PCAP files and get comprehensive network analysis reports with 
+              security insights, performance metrics, and visual network diagrams.
+            </Paragraph>
+            <Space size="large">
+              <Link href="/upload">
+                <Button type="primary" size="large" icon={<CloudUploadOutlined />}>
+                  Start Analysis
+                </Button>
+              </Link>
+              <Link href="/demo">
+                <Button type="default" size="large" ghost>
+                  View Demo
+                </Button>
+              </Link>
+            </Space>
+          </div>
+        </div>
+
+        {/* Features Section */}
+        <div className="py-20 px-4">
+          <div className="max-w-7xl mx-auto">
+            <div className="text-center mb-16">
+              <Title level={2} className="mb-4">
+                Powerful Network Analysis Features
+              </Title>
+              <Paragraph className="text-lg text-gray-600 max-w-2xl mx-auto">
+                Our advanced analysis engine provides comprehensive insights into your network traffic
+                with professional-grade reporting capabilities.
+              </Paragraph>
+            </div>
+
+            <Row gutter={[32, 32]}>
+              {features.map((feature, index) => (
+                <Col xs={24} md={12} lg={8} key={index}>
+                  <Card 
+                    className="h-full hover:shadow-lg transition-shadow duration-300"
+                    hoverable
+                  >
+                    <div className="text-center">
+                      <div className="mb-4">
+                        {feature.icon}
+                      </div>
+                      <Title level={4} className="mb-3">
+                        {feature.title}
+                      </Title>
+                      <Paragraph className="text-gray-600">
+                        {feature.description}
+                      </Paragraph>
+                    </div>
+                  </Card>
+                </Col>
+              ))}
+            </Row>
+          </div>
+        </div>
+
+        {/* Stats Section */}
+        <div className="bg-white py-16">
+          <div className="max-w-7xl mx-auto px-4">
+            <Row gutter={[32, 32]} className="text-center">
+              <Col xs={24} sm={8}>
+                <div>
+                  <Title level={2} className="text-blue-600 mb-2">
+                    99.9%
+                  </Title>
+                  <Text className="text-gray-600">Analysis Accuracy</Text>
+                </div>
+              </Col>
+              <Col xs={24} sm={8}>
+                <div>
+                  <Title level={2} className="text-green-600 mb-2">
+                    &lt;30s
+                  </Title>
+                  <Text className="text-gray-600">Average Processing Time</Text>
+                </div>
+              </Col>
+              <Col xs={24} sm={8}>
+                <div>
+                  <Title level={2} className="text-purple-600 mb-2">
+                    50+
+                  </Title>
+                  <Text className="text-gray-600">Analysis Metrics</Text>
+                </div>
+              </Col>
+            </Row>
+          </div>
+        </div>
+
+        {/* Call to Action */}
+        <div className="bg-gray-100 py-16">
+          <div className="max-w-4xl mx-auto text-center px-4">
+            <Title level={2} className="mb-4">
+              Ready to Analyze Your Network Traffic?
+            </Title>
+            <Paragraph className="text-lg text-gray-600 mb-8">
+              Upload your PCAP files and get detailed insights in minutes. 
+              No registration required - start analyzing immediately.
+            </Paragraph>
+            <Link href="/upload">
+              <Button type="primary" size="large" icon={<CloudUploadOutlined />}>
+                Upload Your First PCAP File
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </Content>
+
+      {/* Footer */}
+      <Footer className="bg-slate-800 text-white">
+        <div className="max-w-7xl mx-auto px-4">
+          <Row gutter={[32, 32]}>
+            <Col xs={24} md={8}>
+              <div className="flex items-center space-x-2 mb-4">
+                <NetworkOutlined className="text-xl" />
+                <Title level={4} className="text-white mb-0">
+                  PCAP Reporter
+                </Title>
+              </div>
+              <Paragraph className="text-gray-400">
+                Professional network analysis and reporting tool for PCAP files.
+              </Paragraph>
+            </Col>
+            <Col xs={24} md={8}>
+              <Title level={5} className="text-white mb-4">
+                Features
+              </Title>
+              <ul className="space-y-2 text-gray-400">
+                <li>PCAP Analysis</li>
+                <li>Security Scanning</li>
+                <li>Performance Metrics</li>
+                <li>PDF Reports</li>
+              </ul>
+            </Col>
+            <Col xs={24} md={8}>
+              <Title level={5} className="text-white mb-4">
+                Support
+              </Title>
+              <ul className="space-y-2 text-gray-400">
+                <li>Documentation</li>
+                <li>API Reference</li>
+                <li>Sample Files</li>
+                <li>Contact Support</li>
+              </ul>
+            </Col>
+          </Row>
+          <Divider className="border-gray-600" />
+          <div className="text-center text-gray-400">
+            <Text>© 2024 PCAP Reporter. Built with Next.js, FastAPI, and modern web technologies.</Text>
+          </div>
+        </div>
+      </Footer>
+    </Layout>
+  )
+} 

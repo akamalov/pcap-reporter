@@ -1,0 +1,68 @@
+# FastAPI and ASGI server
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+gunicorn==21.2.0
+
+# Database and ODM
+motor==3.3.2
+pymongo==4.6.0
+beanie==1.23.6
+
+# Task queue and caching
+celery==5.3.4
+redis==5.0.1
+flower==2.0.1
+
+# PCAP analysis libraries
+scapy==2.5.0
+pyshark==0.6.0
+dpkt==1.9.8
+
+# Data processing and analysis
+pandas==2.1.4
+numpy==1.24.4
+matplotlib==3.8.2
+seaborn==0.13.0
+
+# Security and authentication
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+python-multipart==0.0.6
+
+# Configuration and environment
+pydantic==2.5.2
+pydantic-settings==2.1.0
+python-dotenv==1.0.0
+
+# HTTP client
+httpx==0.25.2
+requests==2.31.0
+
+# File handling
+aiofiles==23.2.1
+python-magic==0.4.27
+
+# Logging and monitoring
+structlog==23.2.0
+prometheus-client==0.19.0
+
+# Testing (for development)
+pytest==7.4.3
+pytest-asyncio==0.21.1
+pytest-cov==4.1.0
+httpx==0.25.2
+
+# Development tools
+black==23.11.0
+isort==5.12.0
+flake8==6.1.0
+mypy==1.7.1
+
+# Documentation
+mkdocs==1.5.3
+mkdocs-material==9.4.10
+
+# Utilities
+click==8.1.7
+rich==13.7.0
+typer==0.9.0 
