@@ -86,6 +86,9 @@ class Report(Document):
     # Job tracking
     job_id: Optional[str] = None
     
+    # Analysis configuration
+    analysis_options: Optional[Dict[str, Any]] = None
+    
     # User context (for future authentication)
     user_id: Optional[str] = None
     

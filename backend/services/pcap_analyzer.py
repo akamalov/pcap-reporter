@@ -22,7 +22,7 @@ except ImportError:
     SCAPY_AVAILABLE = False
     logging.warning("Scapy not available, falling back to tshark-only analysis")
 
-from models.report import AnalysisResults, TrafficStats, NetworkIssue, TopProtocol, TopHost, SecurityAlert
+from models.report import AnalysisResults
 
 logger = logging.getLogger(__name__)
 

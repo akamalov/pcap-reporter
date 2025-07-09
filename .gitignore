@@ -44,6 +44,11 @@ coverage.xml
 .hypothesis/
 .pytest_cache/
 cover/
+CLAUDE.md
+GEMINI.md
+.claude/
+.gemini/
+.cursor/
 
 # Translations
 *.mo
@@ -285,4 +290,6 @@ nginx_logs/
 # Backup files
 *.bak
 *.backup 
+docs/planning/*
+docs/tasks/*
 

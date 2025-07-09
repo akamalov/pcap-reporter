@@ -26,8 +26,13 @@ class AnalysisJob(Document):
     """
     
     # Job identification
-    job_id: Indexed(str)  # Celery task ID
+    job_id: Indexed(str)  # Our custom job ID
+    celery_task_id: Optional[str] = None  # Celery task ID
     report_id: Indexed(PydanticObjectId)  # Reference to the report
+    
+    # Analysis configuration
+    options: Optional[Dict[str, Any]] = None
+    estimated_completion: Optional[datetime] = None
     
     # Status and timing
     status: JobStatus = JobStatus.PENDING

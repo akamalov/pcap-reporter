@@ -49,7 +49,7 @@ celery_app.conf.update(
     
     # Task annotations
     task_annotations={
-        "tasks.analysis_tasks.analyze_pcap": {
+        "tasks.analysis_tasks.analyze_pcap_file": {
             "rate_limit": "10/m",
             "time_limit": settings.ANALYSIS_TIMEOUT,
             "soft_time_limit": settings.ANALYSIS_TIMEOUT - 30,
