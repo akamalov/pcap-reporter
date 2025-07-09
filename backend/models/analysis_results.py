@@ -138,6 +138,9 @@ class AnalysisResults(BaseModel):
     tcp_analysis: Optional[TCPAnalysis] = Field(default=None, description="TCP-specific analysis")
     dns_analysis: Optional[DNSAnalysis] = Field(default=None, description="DNS-specific analysis")
     
+    # Advanced protocol analysis results
+    protocol_analysis: Optional[Dict[str, Any]] = Field(default=None, description="Detailed protocol analysis results")
+    
     # Communication flows
     top_conversations: List[ConversationFlow] = Field(default_factory=list, 
                                                      description="Top network conversations")

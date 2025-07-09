@@ -23,6 +23,8 @@ from models.analysis_results import (
     NetworkIssue, TCPAnalysis, DNSAnalysis, ConversationFlow,
     SeverityLevel, IssueType
 )
+from services.protocol_analyzers import ProtocolAnalysisEngine
+from services.packet_processing_pipeline import PacketProcessingPipeline
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +45,8 @@ class PcapAnalysisService:
     def __init__(self):
         """Initialize the PCAP analysis service."""
         self.logger = logging.getLogger(__name__)
+        self.protocol_engine = ProtocolAnalysisEngine()
+        self.packet_pipeline = PacketProcessingPipeline()
     
     async def analyze_pcap_file(self, file_path: str, options: Optional[Dict[str, Any]] = None) -> AnalysisResults:
         """
@@ -70,6 +74,9 @@ class PcapAnalysisService:
         
         # Analyze protocols
         protocol_data = await self._analyze_protocols(file_path)
+        
+        # Perform advanced protocol analysis
+        advanced_protocol_analysis = await self._perform_advanced_protocol_analysis(file_path)
         
         # Detect performance issues
         issues = await self._detect_performance_issues(file_path)
@@ -126,6 +133,7 @@ class PcapAnalysisService:
             performance_metrics=performance_metrics,
             protocol_stats=protocol_stats,
             issues=network_issues,
+            protocol_analysis=advanced_protocol_analysis,
             start_time=basic_stats['start_time'],
             end_time=basic_stats['end_time'],
             analysis_options=options or {},
@@ -133,7 +141,57 @@ class PcapAnalysisService:
         )
         
         return results
-    
+
+    async def analyze_pcap(self, file_path: str, options: Optional[Dict[str, Any]] = None) -> AnalysisResults:
+        """
+        Enhanced PCAP analysis method that integrates packet processing pipeline and protocol analysis.
+        
+        This method provides the comprehensive analysis interface expected by the integration tests
+        and includes advanced protocol analysis capabilities.
+        """
+        return await self.analyze_pcap_file(file_path, options)
+
+    async def _extract_packets_with_tshark(self, file_path: str) -> List:
+        """
+        Extract packets using tshark for packet processing pipeline.
+        
+        Returns a list of PacketData objects extracted from the PCAP file.
+        """
+        # Use the packet processing pipeline to extract packets
+        packets = await self.packet_pipeline.extract_packets_with_tshark(file_path)
+        return packets
+
+    async def _perform_advanced_protocol_analysis(self, file_path: str) -> Dict[str, Any]:
+        """
+        Perform advanced protocol analysis using the protocol analysis engine.
+        
+        This includes deep packet inspection, stream reconstruction, and 
+        protocol-specific analysis for TCP, UDP, HTTP, and DNS.
+        """
+        try:
+            # Extract packets using the packet processing pipeline
+            packets = await self._extract_packets_with_tshark(file_path)
+            
+            if not packets:
+                self.logger.warning("No packets extracted from PCAP file")
+                return {}
+            
+            # Perform comprehensive protocol analysis
+            protocol_results = await self.protocol_engine.analyze_protocols(packets)
+            
+            # Generate protocol summary
+            protocol_summary = await self.protocol_engine.generate_summary(packets)
+            
+            return {
+                'detailed_results': protocol_results,
+                'summary': protocol_summary,
+                'packet_count': len(packets)
+            }
+            
+        except Exception as e:
+            self.logger.error(f"Advanced protocol analysis failed: {e}")
+            return {}
+
     async def _validate_pcap_file(self, file_path: str) -> None:
         """Validate PCAP file exists and is within size limits."""
         path = Path(file_path)
