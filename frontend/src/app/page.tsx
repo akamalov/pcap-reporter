@@ -6,8 +6,8 @@ import {
   CloudUploadOutlined, 
   FileTextOutlined, 
   BarChartOutlined,
-  ShieldCheckOutlined,
-  NetworkOutlined,
+  SafetyOutlined,
+  GlobalOutlined,
   RocketOutlined
 } from '@ant-design/icons'
 import Link from 'next/link'
@@ -27,12 +27,12 @@ const features = [
     description: 'Comprehensive traffic analysis with protocol statistics, top talkers, and performance metrics.'
   },
   {
-    icon: <ShieldCheckOutlined className="text-red-500" style={{ fontSize: '32px' }} />,
+    icon: <SafetyOutlined className="text-red-500" style={{ fontSize: '32px' }} />,
     title: 'Security Analysis',
     description: 'Advanced security scanning to identify potential threats and network anomalies.'
   },
   {
-    icon: <NetworkOutlined className="text-purple-500" style={{ fontSize: '32px' }} />,
+    icon: <GlobalOutlined className="text-purple-500" style={{ fontSize: '32px' }} />,
     title: 'Network Topology',
     description: 'Visual network diagrams showing communication patterns and logical connections.'
   },
@@ -55,7 +55,7 @@ export default function HomePage() {
       <Header className="bg-slate-800 shadow-lg">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center space-x-4">
-            <NetworkOutlined className="text-white text-2xl" />
+            <GlobalOutlined className="text-white text-2xl" />
             <Title level={3} className="text-white mb-0">
               PCAP Reporter
             </Title>
@@ -93,9 +93,9 @@ export default function HomePage() {
                   Start Analysis
                 </Button>
               </Link>
-              <Link href="/demo">
+              <Link href="/reports">
                 <Button type="default" size="large" ghost>
-                  View Demo
+                  View Reports
                 </Button>
               </Link>
             </Space>
@@ -197,7 +197,7 @@ export default function HomePage() {
           <Row gutter={[32, 32]}>
             <Col xs={24} md={8}>
               <div className="flex items-center space-x-2 mb-4">
-                <NetworkOutlined className="text-xl" />
+                <GlobalOutlined className="text-xl" />
                 <Title level={4} className="text-white mb-0">
                   PCAP Reporter
                 </Title>
