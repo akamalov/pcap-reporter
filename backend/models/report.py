@@ -70,7 +70,7 @@ class Report(Document):
     upload_path: str
     
     # Status and timing
-    status: Indexed(ReportStatus) = ReportStatus.PENDING
+    status: ReportStatus = ReportStatus.PENDING
     created_at: Indexed(datetime) = Field(default_factory=datetime.utcnow)
     updated_at: Indexed(datetime) = Field(default_factory=datetime.utcnow)
     started_at: Optional[datetime] = None

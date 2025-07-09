@@ -3,7 +3,8 @@ Configuration module for MCP PCAP Reporter.
 Uses Pydantic settings for environment variable management.
 """
 
-from pydantic import BaseSettings, validator
+from pydantic import validator
+from pydantic_settings import BaseSettings
 from typing import List, Optional
 import os
 

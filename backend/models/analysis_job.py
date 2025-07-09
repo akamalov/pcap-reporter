@@ -2,12 +2,11 @@
 Analysis Job model for tracking Celery tasks.
 """
 
-from beanie import Document, Indexed
+from beanie import Document, Indexed, PydanticObjectId
 from pydantic import BaseModel, Field
 from typing import Optional, Dict, Any
 from datetime import datetime
 from enum import Enum
-from bson import ObjectId
 
 
 class JobStatus(str, Enum):
@@ -28,10 +27,10 @@ class AnalysisJob(Document):
     
     # Job identification
     job_id: Indexed(str)  # Celery task ID
-    report_id: Indexed(ObjectId)  # Reference to the report
+    report_id: Indexed(PydanticObjectId)  # Reference to the report
     
     # Status and timing
-    status: Indexed(JobStatus) = JobStatus.PENDING
+    status: JobStatus = JobStatus.PENDING
     created_at: Indexed(datetime) = Field(default_factory=datetime.utcnow)
     started_at: Optional[datetime] = None
     completed_at: Optional[datetime] = None

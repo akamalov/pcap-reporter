@@ -9,6 +9,7 @@ import logging
 from core.config import Settings, get_settings
 from core.database import get_database
 from core.celery_app import celery_app
+from services.health_service import get_health_status
 
 logger = logging.getLogger(__name__)
 
@@ -16,41 +17,12 @@ router = APIRouter()
 
 
 @router.get("/")
-async def health_check(settings: Settings = Depends(get_settings)) -> Dict[str, Any]:
+async def health_check() -> Dict[str, Any]:
     """
     Comprehensive health check endpoint.
+    Returns the overall health status of all system components.
     """
-    health_status = {
-        "status": "healthy",
-        "service": "MCP PCAP Reporter API",
-        "version": settings.VERSION,
-        "environment": settings.ENVIRONMENT,
-        "components": {}
-    }
-    
-    # Check database connection
-    try:
-        db = await get_database()
-        await db.command("ping")
-        health_status["components"]["database"] = "healthy"
-    except Exception as e:
-        logger.error(f"Database health check failed: {e}")
-        health_status["components"]["database"] = "unhealthy"
-        health_status["status"] = "unhealthy"
-    
-    # Check Redis/Celery connection
-    try:
-        celery_inspect = celery_app.control.inspect()
-        active_tasks = celery_inspect.active()
-        health_status["components"]["redis"] = "healthy" if active_tasks is not None else "unhealthy"
-        health_status["components"]["celery"] = health_status["components"]["redis"]
-    except Exception as e:
-        logger.error(f"Redis/Celery health check failed: {e}")
-        health_status["components"]["redis"] = "unhealthy"
-        health_status["components"]["celery"] = "unhealthy"
-        health_status["status"] = "unhealthy"
-    
-    return health_status
+    return await get_health_status()
 
 
 @router.get("/database")
