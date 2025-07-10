@@ -11,6 +11,7 @@ import {
   RocketOutlined
 } from '@ant-design/icons'
 import Link from 'next/link'
+import { ThemeToggle } from './components/ThemeToggle'
 
 const { Header, Content, Footer } = Layout
 const { Title, Paragraph, Text } = Typography
@@ -53,52 +54,81 @@ export default function HomePage() {
     <Layout className="min-h-screen">
       {/* Header */}
       <Header className="bg-slate-800 shadow-lg">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <GlobalOutlined className="text-white text-2xl" />
-            <Title level={3} className="text-white mb-0">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 flex items-center justify-between gap-2 sm:gap-4">
+          <Link href="/" className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-shrink-0">
+            <GlobalOutlined className="text-white text-lg sm:text-xl md:text-2xl" />
+            <Title level={3} className="text-white mb-0 truncate text-sm sm:text-base md:text-lg lg:text-xl">
               PCAP Reporter
             </Title>
-          </div>
-          <Space>
+          </Link>
+          <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
             <Link href="/upload">
-              <Button type="primary" icon={<CloudUploadOutlined />}>
+              <Button 
+                type="primary" 
+                icon={<CloudUploadOutlined />} 
+                className="hidden md:inline-flex"
+                size="middle"
+              >
                 Upload PCAP
               </Button>
+              <Button 
+                type="primary" 
+                icon={<CloudUploadOutlined />} 
+                className="md:hidden" 
+                size="small"
+                title="Upload PCAP"
+              />
             </Link>
             <Link href="/reports">
-              <Button type="default" icon={<FileTextOutlined />}>
+              <Button 
+                type="default" 
+                icon={<FileTextOutlined />} 
+                className="hidden md:inline-flex"
+                size="middle"
+              >
                 View Reports
               </Button>
+              <Button 
+                type="default" 
+                icon={<FileTextOutlined />} 
+                className="md:hidden" 
+                size="small"
+                title="View Reports"
+              />
             </Link>
-          </Space>
+            <ThemeToggle />
+          </div>
         </div>
       </Header>
 
       {/* Main Content */}
       <Content className="bg-gray-50">
         {/* Hero Section */}
-        <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white py-20">
-          <div className="max-w-7xl mx-auto px-4 text-center">
-            <Title level={1} className="text-white mb-4">
-              Professional PCAP Analysis Made Simple
-            </Title>
-            <Paragraph className="text-xl text-blue-100 mb-8 max-w-3xl mx-auto">
-              Upload your PCAP files and get comprehensive network analysis reports with 
-              security insights, performance metrics, and visual network diagrams.
-            </Paragraph>
-            <Space size="large">
-              <Link href="/upload">
-                <Button type="primary" size="large" icon={<CloudUploadOutlined />}>
+        <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white py-12 sm:py-16 md:py-20">
+          <div className="max-w-5xl mx-auto px-6 text-center">
+            <div className="mb-6 sm:mb-8">
+              <Title level={1} className="text-white mb-0 text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl leading-tight font-bold">
+                Professional PCAP Analysis Made Simple
+              </Title>
+            </div>
+            <div className="max-w-3xl mx-auto mb-8 sm:mb-10 md:mb-12">
+              <Paragraph className="text-sm sm:text-base md:text-lg lg:text-xl text-blue-100 leading-relaxed mb-0">
+                Upload your PCAP files and get comprehensive network analysis reports with 
+                security insights, performance metrics, and visual network diagrams.
+              </Paragraph>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center max-w-md sm:max-w-lg mx-auto">
+              <Link href="/upload" className="w-full sm:w-auto">
+                <Button type="primary" size="large" icon={<CloudUploadOutlined />} className="w-full sm:w-auto min-w-[140px]">
                   Start Analysis
                 </Button>
               </Link>
-              <Link href="/reports">
-                <Button type="default" size="large" ghost>
+              <Link href="/reports" className="w-full sm:w-auto">
+                <Button type="default" size="large" ghost className="w-full sm:w-auto min-w-[140px]">
                   View Reports
                 </Button>
               </Link>
-            </Space>
+            </div>
           </div>
         </div>
 

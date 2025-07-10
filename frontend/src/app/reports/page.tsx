@@ -45,6 +45,7 @@ import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
 import { ApiService, handleApiError, formatFileSize, formatDuration } from '@/lib/api'
 import type { AnalysisJob, ReportsStats } from '@/lib/api'
+import { ThemeToggle } from '../components/ThemeToggle'
 
 dayjs.extend(relativeTime)
 
@@ -316,20 +317,33 @@ export default function ReportsPage() {
     <Layout className="min-h-screen">
       {/* Header */}
       <Header className="bg-slate-800 shadow-lg">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <Link href="/" className="flex items-center space-x-4">
-            <GlobalOutlined className="text-white text-2xl" />
-            <Title level={3} className="text-white mb-0">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 flex items-center justify-between gap-2 sm:gap-4">
+          <Link href="/" className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-shrink-0">
+            <GlobalOutlined className="text-white text-lg sm:text-xl md:text-2xl" />
+            <Title level={3} className="text-white mb-0 truncate text-sm sm:text-base md:text-lg lg:text-xl">
               PCAP Reporter
             </Title>
           </Link>
-          <Space>
+          <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
             <Link href="/upload">
-              <Button type="primary" icon={<CloudUploadOutlined />}>
+              <Button 
+                type="primary" 
+                icon={<CloudUploadOutlined />} 
+                className="hidden md:inline-flex"
+                size="middle"
+              >
                 Upload PCAP
               </Button>
+              <Button 
+                type="primary" 
+                icon={<CloudUploadOutlined />} 
+                className="md:hidden" 
+                size="small"
+                title="Upload PCAP"
+              />
             </Link>
-          </Space>
+            <ThemeToggle />
+          </div>
         </div>
       </Header>
 

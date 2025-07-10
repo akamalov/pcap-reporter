@@ -60,6 +60,7 @@ import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
 import { ApiService, handleApiError, formatFileSize, formatDuration, getSeverityColor } from '@/lib/api'
 import type { AnalysisResult } from '@/lib/api'
+import { ThemeToggle } from '../../components/ThemeToggle'
 
 dayjs.extend(relativeTime)
 
@@ -197,6 +198,7 @@ export default function ReportViewPage() {
             >
               Download PDF
             </Button>
+            <ThemeToggle />
           </Space>
         </div>
       </Header>

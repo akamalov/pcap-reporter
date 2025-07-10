@@ -31,6 +31,7 @@ import { useRouter } from 'next/navigation'
 import type { UploadProps, UploadFile } from 'antd/es/upload/interface'
 import { ApiService, handleApiError, formatFileSize } from '@/lib/api'
 import type { UploadResponse } from '@/lib/api'
+import { ThemeToggle } from '../components/ThemeToggle'
 
 const { Header, Content, Footer } = Layout
 const { Title, Paragraph, Text } = Typography
@@ -126,20 +127,33 @@ export default function UploadPage() {
     <Layout className="min-h-screen">
       {/* Header */}
       <Header className="bg-slate-800 shadow-lg">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <Link href="/" className="flex items-center space-x-4">
-            <GlobalOutlined className="text-white text-2xl" />
-            <Title level={3} className="text-white mb-0">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 flex items-center justify-between gap-2 sm:gap-4">
+          <Link href="/" className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-shrink-0">
+            <GlobalOutlined className="text-white text-lg sm:text-xl md:text-2xl" />
+            <Title level={3} className="text-white mb-0 truncate text-sm sm:text-base md:text-lg lg:text-xl">
               PCAP Reporter
             </Title>
           </Link>
-          <Space>
+          <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
             <Link href="/reports">
-              <Button type="default" icon={<FileTextOutlined />}>
+              <Button 
+                type="default" 
+                icon={<FileTextOutlined />} 
+                className="hidden md:inline-flex"
+                size="middle"
+              >
                 View Reports
               </Button>
+              <Button 
+                type="default" 
+                icon={<FileTextOutlined />} 
+                className="md:hidden" 
+                size="small"
+                title="View Reports"
+              />
             </Link>
-          </Space>
+            <ThemeToggle />
+          </div>
         </div>
       </Header>
 
@@ -149,10 +163,10 @@ export default function UploadPage() {
           
           {/* Page Header */}
           <div className="mb-8">
-            <Title level={2} className="mb-2">
+            <Title level={2} className="mb-2 text-xl sm:text-2xl md:text-3xl">
               Upload PCAP File
             </Title>
-            <Paragraph className="text-gray-600">
+            <Paragraph className="text-gray-600 text-sm sm:text-base leading-relaxed">
               Upload your PCAP files for comprehensive network analysis. 
               Supported formats: .pcap, .pcapng, .cap (max 100MB)
             </Paragraph>
