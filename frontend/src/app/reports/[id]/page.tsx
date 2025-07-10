@@ -170,34 +170,49 @@ export default function ReportViewPage() {
     <Layout className="min-h-screen">
       {/* Header */}
       <Header className="bg-slate-800 shadow-lg">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center space-x-4">
+        <div className="max-w-7xl mx-auto px-4 flex items-center justify-between">
+          <div className="flex items-center space-x-3 min-w-0 flex-shrink-0">
             <Link href="/reports">
-              <Button type="text" icon={<ArrowLeftOutlined />} className="text-white">
-                Back to Reports
+              <Button type="text" icon={<ArrowLeftOutlined />} className="text-white hover:bg-slate-700">
+                <span className="hidden sm:inline">Back to Reports</span>
               </Button>
             </Link>
             <GlobalOutlined className="text-white text-2xl" />
-            <Title level={3} className="text-white mb-0">
+            <Title level={3} className="text-white mb-0 truncate">
               Analysis Report
             </Title>
           </div>
-          <Space>
+          <Space className="flex-shrink-0">
             <Button
               icon={<ReloadOutlined />}
               loading={refreshing}
               onClick={() => fetchReport(false)}
+              className="hidden sm:inline-flex"
             >
               Refresh
+            </Button>
+            <Button
+              icon={<ReloadOutlined />}
+              loading={refreshing}
+              onClick={() => fetchReport(false)}
+              className="sm:hidden"
+            />
+            <Button
+              type="primary"
+              icon={<DownloadOutlined />}
+              onClick={handleDownload}
+              disabled={report.status !== 'completed'}
+              className="hidden sm:inline-flex"
+            >
+              Download PDF
             </Button>
             <Button
               type="primary"
               icon={<DownloadOutlined />}
               onClick={handleDownload}
               disabled={report.status !== 'completed'}
-            >
-              Download PDF
-            </Button>
+              className="sm:hidden"
+            />
             <ThemeToggle />
           </Space>
         </div>
