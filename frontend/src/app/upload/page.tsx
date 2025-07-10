@@ -127,32 +127,26 @@ export default function UploadPage() {
     <Layout className="min-h-screen">
       {/* Header */}
       <Header className="bg-slate-800 shadow-lg">
-        <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 flex items-center justify-between gap-2 sm:gap-4">
-          <Link href="/" className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-shrink-0">
-            <GlobalOutlined className="text-white text-lg sm:text-xl md:text-2xl" />
-            <Title level={3} className="text-white mb-0 truncate text-sm sm:text-base md:text-lg lg:text-xl">
+        <div className="max-w-7xl mx-auto px-4 lg:px-6 flex items-center justify-between h-32">
+          <Link href="/" className="flex items-center space-x-3 flex-shrink-0">
+            <GlobalOutlined className="text-white text-2xl" />
+            <div style={{ marginLeft: '-7px' }}>
+              <ThemeToggle />
+            </div>
+            <Title level={3} className="text-white mb-0 hidden sm:block">
               PCAP Reporter
             </Title>
           </Link>
-          <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+          <div className="flex items-center space-x-3 flex-shrink-0">
             <Link href="/reports">
               <Button 
                 type="default" 
                 icon={<FileTextOutlined />} 
-                className="hidden md:inline-flex"
-                size="middle"
+                className="h-8 px-4 text-sm"
               >
-                View Reports
+                <span className="hidden sm:inline">View Reports</span>
               </Button>
-              <Button 
-                type="default" 
-                icon={<FileTextOutlined />} 
-                className="md:hidden" 
-                size="small"
-                title="View Reports"
-              />
             </Link>
-            <ThemeToggle />
           </div>
         </div>
       </Header>
@@ -162,7 +156,7 @@ export default function UploadPage() {
         <div className="max-w-4xl mx-auto">
           
           {/* Page Header */}
-          <div className="mb-8">
+          <div className="mb-8" style={{ marginTop: '120px', paddingTop: '60px', marginLeft: '20px' }}>
             <Title level={2} className="mb-2 text-xl sm:text-2xl md:text-3xl">
               Upload PCAP File
             </Title>
@@ -172,158 +166,146 @@ export default function UploadPage() {
             </Paragraph>
           </div>
 
-          <Row gutter={[24, 24]}>
-            <Col xs={24} lg={16}>
-              {/* Upload Area */}
-              <Card className="mb-6">
-                <Dragger {...uploadProps} className="mb-4">
-                  <p className="ant-upload-drag-icon">
-                    <InboxOutlined style={{ fontSize: '48px', color: '#1890ff' }} />
-                  </p>
-                  <p className="ant-upload-text">
-                    Click or drag PCAP file to this area to upload
-                  </p>
-                  <p className="ant-upload-hint">
-                    Support for .pcap, .pcapng, and .cap files up to 100MB.
-                    Analysis will start automatically after upload.
-                  </p>
-                </Dragger>
+          {/* Upload Area */}
+          <Card className="mb-6">
+            <Dragger {...uploadProps} className="mb-4">
+              <p className="ant-upload-drag-icon">
+                <InboxOutlined style={{ fontSize: '48px', color: '#1890ff' }} />
+              </p>
+              <p className="ant-upload-text">
+                Click or drag PCAP file to this area to upload
+              </p>
+              <p className="ant-upload-hint">
+                Support for .pcap, .pcapng, and .cap files up to 100MB.
+                Analysis will start automatically after upload.
+              </p>
+            </Dragger>
 
-                {/* Upload Progress */}
-                {uploading && (
-                  <div className="mt-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <Text strong>Uploading: {currentUpload}</Text>
-                      <Text>{Math.round(uploadProgress)}%</Text>
-                    </div>
-                    <Progress 
-                      percent={Math.round(uploadProgress)} 
-                      status={uploadProgress === 100 ? 'success' : 'active'}
-                      strokeColor={{
-                        '0%': '#108ee9',
-                        '100%': '#87d068',
-                      }}
-                    />
-                    {uploadProgress === 100 && (
-                      <Alert
-                        message="Upload Complete!"
-                        description="Redirecting to analysis report..."
-                        type="success"
-                        icon={<CheckCircleOutlined />}
-                        className="mt-3"
-                      />
-                    )}
-                  </div>
-                )}
-              </Card>
-
-              {/* Recent Uploads */}
-              {uploadedFiles.length > 0 && (
-                <Card title="Recent Uploads" className="mb-6">
-                  <List
-                    dataSource={uploadedFiles}
-                    renderItem={(item) => (
-                      <List.Item
-                        actions={[
-                          <Link key="view" href={`/reports/${item.job_id}`}>
-                            <Button type="link" icon={<FileTextOutlined />}>
-                              View Report
-                            </Button>
-                          </Link>
-                        ]}
-                      >
-                        <List.Item.Meta
-                          avatar={<FileTextOutlined style={{ fontSize: '24px', color: '#1890ff' }} />}
-                          title={
-                            <div className="flex items-center space-x-2">
-                              <Text strong>{item.filename}</Text>
-                              <Tag color="blue">{item.status}</Tag>
-                            </div>
-                          }
-                          description={
-                            <div>
-                              <Text type="secondary">
-                                Size: {formatFileSize(item.file_size)} • 
-                                Uploaded: {formatDate(item.created_at)} • 
-                                Type: {item.analysis_type}
-                              </Text>
-                            </div>
-                          }
-                        />
-                      </List.Item>
-                    )}
+            {/* Upload Progress */}
+            {uploading && (
+              <div className="mt-4">
+                <div className="flex items-center justify-between mb-2">
+                  <Text strong>Uploading: {currentUpload}</Text>
+                  <Text>{Math.round(uploadProgress)}%</Text>
+                </div>
+                <Progress 
+                  percent={Math.round(uploadProgress)} 
+                  status={uploadProgress === 100 ? 'success' : 'active'}
+                  strokeColor={{
+                    '0%': '#108ee9',
+                    '100%': '#87d068',
+                  }}
+                />
+                {uploadProgress === 100 && (
+                  <Alert
+                    message="Upload Complete!"
+                    description="Redirecting to analysis report..."
+                    type="success"
+                    icon={<CheckCircleOutlined />}
+                    className="mt-3"
                   />
-                </Card>
-              )}
+                )}
+              </div>
+            )}
+          </Card>
+
+          <div style={{ marginTop: '32px' }}>
+            <Row gutter={[24, 24]}>
+            <Col xs={24} sm={12} lg={6}>
+              {/* Supported Formats */}
+              <Card title="Supported Formats" className="mb-6">
+                <ul className="text-sm text-gray-600">
+                  <li>PCAP (.pcap)</li>
+                  <li>PCAP Next Generation (.pcapng)</li>
+                  <li>Wireshark Capture (.cap)</li>
+                </ul>
+              </Card>
             </Col>
 
-            <Col xs={24} lg={8}>
-              {/* Upload Guidelines */}
-              <Card title="Upload Guidelines" className="mb-6">
-                <Space direction="vertical" size="middle" className="w-full">
-                  <div>
-                    <Title level={5} className="mb-2">
-                      <CheckCircleOutlined className="text-green-500 mr-2" />
-                      Supported Formats
-                    </Title>
-                    <ul className="text-sm text-gray-600 ml-6">
-                      <li>PCAP (.pcap)</li>
-                      <li>PCAP Next Generation (.pcapng)</li>
-                      <li>Wireshark Capture (.cap)</li>
-                    </ul>
-                  </div>
-
-                  <Divider className="my-3" />
-
-                  <div>
-                    <Title level={5} className="mb-2">
-                      <ExclamationCircleOutlined className="text-orange-500 mr-2" />
-                      File Requirements
-                    </Title>
-                    <ul className="text-sm text-gray-600 ml-6">
-                      <li>Maximum file size: 100MB</li>
-                      <li>Valid PCAP file structure</li>
-                      <li>Readable packet data</li>
-                    </ul>
-                  </div>
-
-                  <Divider className="my-3" />
-
-                  <div>
-                    <Title level={5} className="mb-2">
-                      <LoadingOutlined className="text-blue-500 mr-2" />
-                      Analysis Process
-                    </Title>
-                    <ul className="text-sm text-gray-600 ml-6">
-                      <li>Upload validation (~5 seconds)</li>
-                      <li>Basic statistics extraction</li>
-                      <li>Protocol analysis</li>
-                      <li>Security scanning</li>
-                      <li>Report generation</li>
-                    </ul>
-                  </div>
-                </Space>
+            <Col xs={24} sm={12} lg={6}>
+              {/* File Requirements */}
+              <Card title="File Requirements" className="mb-6">
+                <ul className="text-sm text-gray-600">
+                  <li>Maximum file size: 100MB</li>
+                  <li>Valid PCAP file structure</li>
+                  <li>Readable packet data</li>
+                </ul>
               </Card>
+            </Col>
 
+            <Col xs={24} sm={12} lg={6}>
+              {/* Analysis Process */}
+              <Card title="Analysis Process" className="mb-6">
+                <ul className="text-sm text-gray-600">
+                  <li>Upload validation (~5 seconds)</li>
+                  <li>Basic statistics extraction</li>
+                  <li>Protocol analysis</li>
+                  <li>Security scanning</li>
+                  <li>Report generation</li>
+                </ul>
+              </Card>
+            </Col>
+
+            <Col xs={24} sm={12} lg={6}>
               {/* Sample Files */}
               <Card title="Need Sample Files?" className="mb-6">
                 <Paragraph className="text-sm text-gray-600 mb-4">
                   Don't have a PCAP file? Download our sample files to test the analysis features.
                 </Paragraph>
                 <Space direction="vertical" className="w-full">
-                  <Button type="dashed" block>
+                  <Button type="dashed" block size="small">
                     Download HTTP Traffic Sample
                   </Button>
-                  <Button type="dashed" block>
+                  <Button type="dashed" block size="small">
                     Download DNS Analysis Sample
                   </Button>
-                  <Button type="dashed" block>
+                  <Button type="dashed" block size="small">
                     Download Mixed Protocol Sample
                   </Button>
                 </Space>
               </Card>
             </Col>
-          </Row>
+            </Row>
+          </div>
+
+          {/* Recent Uploads */}
+          {uploadedFiles.length > 0 && (
+            <Card title="Recent Uploads" className="mb-6">
+              <List
+                dataSource={uploadedFiles}
+                renderItem={(item) => (
+                  <List.Item
+                    actions={[
+                      <Link key="view" href={`/reports/${item.job_id}`}>
+                        <Button type="link" icon={<FileTextOutlined />}>
+                          View Report
+                        </Button>
+                      </Link>
+                    ]}
+                  >
+                    <List.Item.Meta
+                      avatar={<FileTextOutlined style={{ fontSize: '24px', color: '#1890ff' }} />}
+                      title={
+                        <div className="flex items-center space-x-2">
+                          <Text strong>{item.filename}</Text>
+                          <Tag color="blue">{item.status}</Tag>
+                        </div>
+                      }
+                      description={
+                        <div>
+                          <Text type="secondary">
+                            Size: {formatFileSize(item.file_size)} • 
+                            Uploaded: {formatDate(item.created_at)} • 
+                            Type: {item.analysis_type}
+                          </Text>
+                        </div>
+                      }
+                    />
+                  </List.Item>
+                )}
+              />
+            </Card>
+          )}
         </div>
       </Content>
 
