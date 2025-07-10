@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { Layout, Typography, Button, Card, Row, Col, Space, Divider } from 'antd'
+import { Layout, Typography, Button, Card, Row, Col, Divider } from 'antd'
 import { 
   CloudUploadOutlined, 
   FileTextOutlined, 
@@ -54,117 +54,90 @@ export default function HomePage() {
     <Layout className="min-h-screen">
       {/* Header */}
       <Header className="bg-slate-800 shadow-lg">
-        <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 flex items-center justify-between gap-2 sm:gap-4">
-          <Link href="/" className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-shrink-0">
-            <GlobalOutlined className="text-white text-lg sm:text-xl md:text-2xl" />
-            <Title level={3} className="text-white mb-0 truncate text-sm sm:text-base md:text-lg lg:text-xl">
+        <div className="max-w-7xl mx-auto px-4 lg:px-6 flex items-center justify-between h-16">
+          <Link href="/" className="flex items-center space-x-3 flex-shrink-0">
+            <GlobalOutlined className="text-white text-2xl" />
+            <div style={{ marginLeft: '-7px' }}>
+              <ThemeToggle />
+            </div>
+            <Title level={3} className="text-white mb-0 hidden sm:block">
               PCAP Reporter
             </Title>
           </Link>
-          <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
-            <Link href="/upload">
-              <Button 
-                type="primary" 
-                icon={<CloudUploadOutlined />} 
-                className="hidden md:inline-flex"
-                size="middle"
-              >
-                Upload PCAP
-              </Button>
-              <Button 
-                type="primary" 
-                icon={<CloudUploadOutlined />} 
-                className="md:hidden" 
-                size="small"
-                title="Upload PCAP"
-              />
-            </Link>
-            <Link href="/reports">
-              <Button 
-                type="default" 
-                icon={<FileTextOutlined />} 
-                className="hidden md:inline-flex"
-                size="middle"
-              >
-                View Reports
-              </Button>
-              <Button 
-                type="default" 
-                icon={<FileTextOutlined />} 
-                className="md:hidden" 
-                size="small"
-                title="View Reports"
-              />
-            </Link>
-            <ThemeToggle />
-          </div>
         </div>
       </Header>
 
       {/* Main Content */}
       <Content className="bg-gray-50">
         {/* Hero Section */}
-        <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white">
-          <div className="max-w-6xl mx-auto px-6 py-16 md:py-24">
-            {/* Main Title */}
-            <div className="text-center mb-12">
-              <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-8 leading-tight">
+        <section className="bg-gradient-to-r from-blue-600 to-purple-600 text-white min-h-[600px] flex items-center">
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
+            <div className="max-w-4xl mx-auto text-center">
+              <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-8 leading-[1.1]">
                 Professional PCAP Analysis Made Simple
               </h1>
               
-              {/* Action Buttons */}
-              <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
+              <p className="text-lg sm:text-xl md:text-2xl text-blue-100 mb-10 leading-relaxed max-w-3xl mx-auto px-4">
+                Upload PCAP files. Get instant analysis reports.
+              </p>
+              
+              <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start', marginTop: '32px', gap: '32px' }}>
                 <Link href="/upload">
-                  <Button type="primary" size="large" icon={<CloudUploadOutlined />} className="min-w-[160px] h-12">
+                  <Button 
+                    type="primary" 
+                    size="large" 
+                    icon={<CloudUploadOutlined />} 
+                    className="w-56 h-12 text-base font-medium"
+                  >
                     Start Analysis
                   </Button>
                 </Link>
                 <Link href="/reports">
-                  <Button type="default" size="large" ghost className="min-w-[160px] h-12">
+                  <Button 
+                    type="primary" 
+                    size="large" 
+                    icon={<FileTextOutlined />}
+                    className="w-56 h-12 text-base font-medium"
+                  >
                     View Reports
                   </Button>
                 </Link>
               </div>
-              
-              {/* Description */}
-              <div className="max-w-4xl mx-auto">
-                <p className="text-lg md:text-xl text-blue-100 leading-relaxed">
-                  Upload your PCAP files and get comprehensive network analysis reports with 
-                  security insights, performance metrics, and visual network diagrams.
-                </p>
-              </div>
             </div>
           </div>
-        </div>
+        </section>
+
+        {/* Spacer */}
+        <div style={{ height: '32px' }}></div>
 
         {/* Features Section */}
-        <div className="py-20 px-4">
-          <div className="max-w-7xl mx-auto">
-            <div className="text-center mb-16">
-              <Title level={2} className="mb-4">
-                Powerful Network Analysis Features
+        <section style={{ paddingTop: '0px', paddingBottom: '48px', paddingLeft: '24px', paddingRight: '24px' }}>
+          <div className="container mx-auto max-w-6xl">
+            <div className="text-center mb-12 lg:mb-16">
+              <Title level={2} className="mb-4 text-2xl sm:text-3xl md:text-4xl font-bold px-4">
+                Key Features
               </Title>
-              <Paragraph className="text-lg text-gray-600 max-w-2xl mx-auto">
+              <Paragraph className="text-lg sm:text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
                 Our advanced analysis engine provides comprehensive insights into your network traffic
                 with professional-grade reporting capabilities.
               </Paragraph>
             </div>
 
-            <Row gutter={[32, 32]}>
+            <Row gutter={[24, 24]} className="mt-8">
               {features.map((feature, index) => (
-                <Col xs={24} md={12} lg={8} key={index}>
+                <Col xs={24} sm={12} lg={8} key={index}>
                   <Card 
-                    className="h-full hover:shadow-lg transition-shadow duration-300"
+                    className="h-full hover:shadow-xl transition-all duration-300 border-0 shadow-md"
                     hoverable
                   >
-                    <div className="text-center">
-                      <div className="mb-4">
+                    <div className="text-center p-6">
+                      <div className="mb-6 p-4 bg-gray-50 rounded-full inline-block">
                         {feature.icon}
                       </div>
-                      <Title level={4} className="mb-3">
+                      <Title level={4} className="mb-4 text-lg font-semibold">
                         {feature.title}
                       </Title>
-                      <Paragraph className="text-gray-600">
+                      <Paragraph className="text-gray-600 leading-relaxed text-sm">
                         {feature.description}
                       </Paragraph>
                     </div>
@@ -173,71 +146,84 @@ export default function HomePage() {
               ))}
             </Row>
           </div>
-        </div>
+        </section>
 
         {/* Stats Section */}
-        <div className="bg-white py-16">
-          <div className="max-w-7xl mx-auto px-4">
+        <section className="bg-white" style={{ paddingTop: '16px', paddingBottom: '32px' }}>
+          <div className="container mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
             <Row gutter={[32, 32]} className="text-center">
               <Col xs={24} sm={8}>
-                <div>
-                  <Title level={2} className="text-blue-600 mb-2">
+                <div className="py-8">
+                  <div className="text-4xl lg:text-5xl font-bold text-blue-600 mb-4">
                     99.9%
-                  </Title>
-                  <Text className="text-gray-600">Analysis Accuracy</Text>
+                  </div>
+                  <div className="text-gray-600 text-base lg:text-lg font-medium">
+                    Analysis Accuracy
+                  </div>
                 </div>
               </Col>
               <Col xs={24} sm={8}>
-                <div>
-                  <Title level={2} className="text-green-600 mb-2">
+                <div className="py-8">
+                  <div className="text-4xl lg:text-5xl font-bold text-green-600 mb-4">
                     &lt;30s
-                  </Title>
-                  <Text className="text-gray-600">Average Processing Time</Text>
+                  </div>
+                  <div className="text-gray-600 text-base lg:text-lg font-medium">
+                    Average Processing Time
+                  </div>
                 </div>
               </Col>
               <Col xs={24} sm={8}>
-                <div>
-                  <Title level={2} className="text-purple-600 mb-2">
+                <div className="py-8">
+                  <div className="text-4xl lg:text-5xl font-bold text-purple-600 mb-4">
                     50+
-                  </Title>
-                  <Text className="text-gray-600">Analysis Metrics</Text>
+                  </div>
+                  <div className="text-gray-600 text-base lg:text-lg font-medium">
+                    Analysis Metrics
+                  </div>
                 </div>
               </Col>
             </Row>
           </div>
-        </div>
+        </section>
 
         {/* Call to Action */}
-        <div className="bg-gray-100 py-16">
-          <div className="max-w-4xl mx-auto text-center px-4">
-            <Title level={2} className="mb-4">
+        <section className="bg-gray-100" style={{ paddingTop: '20px', paddingBottom: '20px' }}>
+          <div className="container mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 text-center">
+            <Title level={2} className="mb-6 text-2xl sm:text-3xl md:text-4xl font-bold">
               Ready to Analyze Your Network Traffic?
             </Title>
-            <Paragraph className="text-lg text-gray-600 mb-8">
+            <Paragraph className="text-lg sm:text-xl text-gray-600 mb-12 leading-relaxed max-w-2xl mx-auto">
               Upload your PCAP files and get detailed insights in minutes. 
               No registration required - start analyzing immediately.
             </Paragraph>
-            <Link href="/upload">
-              <Button type="primary" size="large" icon={<CloudUploadOutlined />}>
-                Upload Your First PCAP File
-              </Button>
-            </Link>
+            <div className="mb-8">
+              <Link href="/upload">
+                <Button 
+                  type="primary" 
+                  size="large" 
+                  icon={<CloudUploadOutlined />} 
+                  className="h-12 px-8 text-base font-medium"
+                >
+                  Upload PCAP File
+                </Button>
+              </Link>
+            </div>
           </div>
-        </div>
+        </section>
       </Content>
 
       {/* Footer */}
       <Footer className="bg-slate-800 text-white">
-        <div className="max-w-7xl mx-auto px-4">
-          <Row gutter={[32, 32]}>
+        <div className="container mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+          <Row gutter={[32, 32]} className="py-8">
             <Col xs={24} md={8}>
-              <div className="flex items-center space-x-2 mb-4">
-                <GlobalOutlined className="text-xl" />
+              <div className="flex items-center space-x-3 mb-4">
+                <GlobalOutlined className="text-2xl" />
                 <Title level={4} className="text-white mb-0">
                   PCAP Reporter
                 </Title>
               </div>
-              <Paragraph className="text-gray-400">
+              <Paragraph className="text-gray-400 text-base">
                 Professional network analysis and reporting tool for PCAP files.
               </Paragraph>
             </Col>
@@ -264,8 +250,8 @@ export default function HomePage() {
               </ul>
             </Col>
           </Row>
-          <Divider className="border-gray-600" />
-          <div className="text-center text-gray-400">
+          <Divider className="border-gray-600 my-6" />
+          <div className="text-center text-gray-400 pb-4">
             <Text>© 2024 PCAP Reporter. Built with Next.js, FastAPI, and modern web technologies.</Text>
           </div>
         </div>
