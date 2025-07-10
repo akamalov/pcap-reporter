@@ -45,7 +45,6 @@ const nextConfig = {
   
   // Experimental features
   experimental: {
-    appDir: true,
     typedRoutes: true,
   },
   

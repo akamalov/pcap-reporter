@@ -16,7 +16,16 @@ export const ThemeToggle: React.FC = () => {
         onClick={toggleTheme}
         style={{
           color: theme === 'light' ? '#fff' : '#fff',
-          fontSize: '16px',
+          fontSize: '20px',
+          padding: '12px 0',
+          height: '40px',
+          width: '40px',
+          lineHeight: '1',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          minWidth: 'auto',
+          marginTop: '4px',
         }}
       />
     </Tooltip>

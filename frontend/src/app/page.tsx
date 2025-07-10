@@ -55,12 +55,12 @@ export default function HomePage() {
       {/* Header */}
       <Header className="bg-slate-800 shadow-lg">
         <div className="max-w-7xl mx-auto px-4 lg:px-6 flex items-center justify-between h-16">
-          <Link href="/" className="flex items-center space-x-3 flex-shrink-0">
+          <Link href="/" className="flex items-center flex-shrink-0">
             <GlobalOutlined className="text-white text-2xl" />
-            <div style={{ marginLeft: '-7px' }}>
+            <div style={{ marginLeft: '12px', display: 'flex', alignItems: 'center' }}>
               <ThemeToggle />
             </div>
-            <Title level={3} className="text-white mb-0 hidden sm:block">
+            <Title level={3} className="text-white mb-0 hidden sm:block" style={{ marginLeft: '24px', marginRight: '10px' }}>
               PCAP Reporter
             </Title>
           </Link>
@@ -71,8 +71,8 @@ export default function HomePage() {
       <Content className="bg-gray-50">
         {/* Hero Section */}
         <section className="bg-gradient-to-r from-blue-600 to-purple-600 text-white min-h-[600px] flex items-center">
-          <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
-            <div className="max-w-4xl mx-auto text-center">
+          <div className="container px-4 sm:px-6 lg:px-8 py-12" style={{ marginLeft: '8%', marginRight: 'auto' }}>
+            <div className="max-w-4xl text-left">
               <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-8 leading-[1.1]">
                 Professional PCAP Analysis Made Simple
               </h1>
@@ -107,17 +107,14 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* Spacer */}
-        <div style={{ height: '32px' }}></div>
-
         {/* Features Section */}
-        <section style={{ paddingTop: '0px', paddingBottom: '48px', paddingLeft: '24px', paddingRight: '24px' }}>
-          <div className="container mx-auto max-w-6xl">
-            <div className="text-center mb-12 lg:mb-16">
-              <Title level={2} className="mb-4 text-2xl sm:text-3xl md:text-4xl font-bold px-4">
+        <section className="bg-slate-800 text-white" style={{ paddingTop: '48px', paddingBottom: '48px', paddingLeft: '24px', paddingRight: '24px' }}>
+          <div className="container max-w-6xl" style={{ marginLeft: '8%', marginRight: 'auto' }}>
+            <div className="text-left mb-12 lg:mb-16">
+              <Title level={2} className="mb-4 text-2xl sm:text-3xl md:text-4xl font-bold px-4 text-white">
                 Key Features
               </Title>
-              <Paragraph className="text-lg sm:text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
+              <Paragraph className="text-lg sm:text-xl text-gray-300 max-w-3xl leading-relaxed">
                 Our advanced analysis engine provides comprehensive insights into your network traffic
                 with professional-grade reporting capabilities.
               </Paragraph>
@@ -127,17 +124,17 @@ export default function HomePage() {
               {features.map((feature, index) => (
                 <Col xs={24} sm={12} lg={8} key={index}>
                   <Card 
-                    className="h-full hover:shadow-xl transition-all duration-300 border-0 shadow-md"
+                    className="h-full hover:shadow-xl transition-all duration-300 border-0 shadow-md bg-slate-700"
                     hoverable
                   >
                     <div className="text-center p-6">
-                      <div className="mb-6 p-4 bg-gray-50 rounded-full inline-block">
+                      <div className="mb-6 p-4 bg-slate-600 rounded-full inline-block">
                         {feature.icon}
                       </div>
-                      <Title level={4} className="mb-4 text-lg font-semibold">
+                      <Title level={4} className="mb-4 text-lg font-semibold text-white">
                         {feature.title}
                       </Title>
-                      <Paragraph className="text-gray-600 leading-relaxed text-sm">
+                      <Paragraph className="text-gray-300 leading-relaxed text-sm">
                         {feature.description}
                       </Paragraph>
                     </div>
@@ -149,35 +146,35 @@ export default function HomePage() {
         </section>
 
         {/* Stats Section */}
-        <section className="bg-white" style={{ paddingTop: '16px', paddingBottom: '32px' }}>
-          <div className="container mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-            <Row gutter={[32, 32]} className="text-center">
+        <section className="bg-slate-800 text-white" style={{ paddingTop: '16px', paddingBottom: '32px' }}>
+          <div className="container max-w-6xl px-4 sm:px-6 lg:px-8" style={{ marginLeft: '12%', marginRight: 'auto' }}>
+            <Row gutter={[32, 32]} className="text-left">
               <Col xs={24} sm={8}>
                 <div className="py-8">
-                  <div className="text-4xl lg:text-5xl font-bold text-blue-600 mb-4">
+                  <div className="text-4xl lg:text-5xl font-bold text-blue-400 mb-4">
                     99.9%
                   </div>
-                  <div className="text-gray-600 text-base lg:text-lg font-medium">
+                  <div className="text-gray-300 text-base lg:text-lg font-medium">
                     Analysis Accuracy
                   </div>
                 </div>
               </Col>
               <Col xs={24} sm={8}>
                 <div className="py-8">
-                  <div className="text-4xl lg:text-5xl font-bold text-green-600 mb-4">
+                  <div className="text-4xl lg:text-5xl font-bold text-green-400 mb-4">
                     &lt;30s
                   </div>
-                  <div className="text-gray-600 text-base lg:text-lg font-medium">
+                  <div className="text-gray-300 text-base lg:text-lg font-medium">
                     Average Processing Time
                   </div>
                 </div>
               </Col>
               <Col xs={24} sm={8}>
                 <div className="py-8">
-                  <div className="text-4xl lg:text-5xl font-bold text-purple-600 mb-4">
+                  <div className="text-4xl lg:text-5xl font-bold text-purple-400 mb-4">
                     50+
                   </div>
-                  <div className="text-gray-600 text-base lg:text-lg font-medium">
+                  <div className="text-gray-300 text-base lg:text-lg font-medium">
                     Analysis Metrics
                   </div>
                 </div>
@@ -187,16 +184,16 @@ export default function HomePage() {
         </section>
 
         {/* Call to Action */}
-        <section className="bg-gray-100" style={{ paddingTop: '20px', paddingBottom: '20px' }}>
-          <div className="container mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 text-center">
-            <Title level={2} className="mb-6 text-2xl sm:text-3xl md:text-4xl font-bold">
+        <section className="bg-slate-800 text-white" style={{ paddingTop: '48px', paddingBottom: '48px' }}>
+          <div className="container max-w-4xl px-4 sm:px-6 lg:px-8" style={{ marginLeft: '9%', marginRight: 'auto' }}>
+            <Title level={2} className="mb-6 text-2xl sm:text-3xl md:text-4xl font-bold text-white text-left">
               Ready to Analyze Your Network Traffic?
             </Title>
-            <Paragraph className="text-lg sm:text-xl text-gray-600 mb-12 leading-relaxed max-w-2xl mx-auto">
+            <Paragraph className="text-lg sm:text-xl text-gray-300 mb-12 leading-relaxed max-w-2xl text-left">
               Upload your PCAP files and get detailed insights in minutes. 
               No registration required - start analyzing immediately.
             </Paragraph>
-            <div className="mb-8">
+            <div className="mb-8 text-left">
               <Link href="/upload">
                 <Button 
                   type="primary" 
@@ -214,7 +211,7 @@ export default function HomePage() {
 
       {/* Footer */}
       <Footer className="bg-slate-800 text-white">
-        <div className="container mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+        <div className="container max-w-6xl px-4 sm:px-6 lg:px-8" style={{ marginLeft: '7%', marginRight: 'auto' }}>
           <Row gutter={[32, 32]} className="py-8">
             <Col xs={24} md={8}>
               <div className="flex items-center space-x-3 mb-4">

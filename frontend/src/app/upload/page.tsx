@@ -32,6 +32,7 @@ import type { UploadProps, UploadFile } from 'antd/es/upload/interface'
 import { ApiService, handleApiError, formatFileSize } from '@/lib/api'
 import type { UploadResponse } from '@/lib/api'
 import { ThemeToggle } from '../components/ThemeToggle'
+import { useTheme } from '../components/ThemeProvider'
 
 const { Header, Content, Footer } = Layout
 const { Title, Paragraph, Text } = Typography
@@ -41,6 +42,7 @@ const { Dragger } = Upload
 
 export default function UploadPage() {
   const router = useRouter()
+  const { theme } = useTheme()
   const [uploading, setUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
   const [uploadedFiles, setUploadedFiles] = useState<UploadResponse[]>([])
@@ -124,7 +126,7 @@ export default function UploadPage() {
   }
 
   return (
-    <Layout className="min-h-screen">
+    <Layout className="min-h-screen flex flex-col" style={{ backgroundColor: '#f9fafb' }}>
       {/* Header */}
       <Header className="bg-slate-800 shadow-lg">
         <div className="max-w-7xl mx-auto px-4 lg:px-6 flex items-center justify-between h-32">
@@ -309,8 +311,15 @@ export default function UploadPage() {
         </div>
       </Content>
 
-      {/* Footer */}
-      <Footer className="bg-slate-800 text-white text-center">
+      {/* Flexible spacer section that adapts to theme */}
+      <div className="flex-1 transition-colors duration-300 min-h-32" style={{ 
+        backgroundColor: theme === 'dark' ? '#1e293b' : '#f9fafb'
+      }}>
+        {/* This section stretches to fill remaining space and matches the current theme */}
+      </div>
+
+      {/* Footer - pinned to bottom */}
+      <Footer className="bg-slate-800 text-white text-center mt-auto">
         <Text className="text-gray-400">
           © 2024 PCAP Reporter. Built with Next.js, FastAPI, and modern web technologies.
         </Text>

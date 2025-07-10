@@ -13,8 +13,11 @@ RUN apt-get update && apt-get install -y \
     libpcap0.8-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Create and use a non-root user
-RUN useradd --create-home --shell /bin/bash app
+# Create and use a non-root user with specific UID/GID
+ARG USER_ID=1000
+ARG GROUP_ID=1000
+RUN groupadd -g $GROUP_ID app && \
+    useradd -u $USER_ID -g $GROUP_ID --create-home --shell /bin/bash app
 
 # Set work directory
 WORKDIR /app
@@ -39,8 +42,11 @@ RUN apt-get update && apt-get install -y \
     tshark \
     && rm -rf /var/lib/apt/lists/*
 
-# Create and use a non-root user
-RUN useradd --create-home --shell /bin/bash app
+# Create and use a non-root user with specific UID/GID
+ARG USER_ID=1000
+ARG GROUP_ID=1000
+RUN groupadd -g $GROUP_ID app && \
+    useradd -u $USER_ID -g $GROUP_ID --create-home --shell /bin/bash app
 
 # Copy Python dependencies from builder stage
 COPY --from=builder /home/app/.local /home/app/.local

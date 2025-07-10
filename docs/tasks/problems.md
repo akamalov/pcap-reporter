@@ -4,6 +4,67 @@ This document tracks technical problems encountered during development and the s
 
 ---
 
-*No problems encountered yet.*
+## Problem 1: Text Overlapping Issues on Upload Page
+
+**Date:** 2025-07-10  
+**Phase:** Phase 3 - Frontend Foundation & UI Setup  
+**Severity:** Medium  
+
+### Description
+Text elements were overlapping on the upload page, particularly in the hero section and headers, causing poor user experience and readability issues.
+
+### Root Cause
+Inconsistent CSS spacing and layout configurations causing elements to overlap, especially on different screen sizes.
+
+### Solution
+- Completely restructured the hero section layout
+- Fixed text overlapping issues in hero section and headers
+- Improved upload page layout with proper spacing and positioning
+- Fine-tuned ThemeToggle positioning with -7px margin adjustment
+
+### Status
+**RESOLVED** - Fixed in commits 773ac71, 55d6e5a, cd86774, and 2ec9d20
+
+---
+
+## Problem 2: Backend API Upload Error - Permission Denied
+
+**Date:** 2025-07-10  
+**Phase:** Phase 4 - End-to-End Integration  
+**Severity:** High  
+
+### Description
+When attempting to upload PCAP files through the frontend, the backend API returns a 500 Internal Server Error with the message: "Failed to submit analysis job: [Errno 13] Permission denied: '/app'"
+
+### Root Cause
+Docker container user ID mismatch - the container runs as user `app` (UID 1000) but the host directories had incompatible ownership, preventing write access to the upload directories.
+
+### Impact
+- Frontend upload functionality is implemented and working correctly
+- Backend API endpoint exists but fails due to permission issues
+- End-to-end file upload flow was blocked
+
+### Solution Implemented
+1. **Modified Docker Configuration**:
+   - Updated `backend/Dockerfile` to accept `USER_ID` and `GROUP_ID` build arguments
+   - Modified `docker-compose.yml` to pass host user/group IDs to container builds
+   - Ensures container user matches host user for seamless file access
+
+2. **Created Helper Scripts**:
+   - `fix-permissions.sh` - Sets up directories and permissions
+   - `verify-fix.sh` - Verifies configuration is correct
+   - `apply-permission-fix.sh` - Applies complete fix with container rebuild
+   - `test-permissions.sh` - Tests container write permissions
+
+3. **Documentation**:
+   - Created `DOCKER_PERMISSION_FIX.md` with complete solution documentation
+
+### Files Modified
+- `backend/Dockerfile` - Added user ID configuration for permission mapping
+- `docker-compose.yml` - Added build arguments for all backend services
+- Created comprehensive documentation and helper scripts
+
+### Status
+**RESOLVED** - Permission fix implemented, ready for backend deployment testing
 
 --- 
