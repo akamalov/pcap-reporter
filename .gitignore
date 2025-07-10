@@ -285,8 +285,8 @@ nginx_logs/
 # Backup files
 *.bak
 *.backup 
-docs/planning/*
-docs/tasks/*
+#docs/planning/*
+#docs/tasks/*
 
 
 # AI Assistant Files
