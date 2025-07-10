@@ -104,30 +104,35 @@ export default function HomePage() {
       {/* Main Content */}
       <Content className="bg-gray-50">
         {/* Hero Section */}
-        <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white py-12 sm:py-16 md:py-20">
-          <div className="max-w-5xl mx-auto px-6 text-center">
-            <div className="mb-6 sm:mb-8">
-              <Title level={1} className="text-white mb-0 text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl leading-tight font-bold">
+        <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white">
+          <div className="max-w-6xl mx-auto px-6 py-16 md:py-24">
+            {/* Main Title */}
+            <div className="text-center mb-12">
+              <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-8 leading-tight">
                 Professional PCAP Analysis Made Simple
-              </Title>
-            </div>
-            <div className="max-w-3xl mx-auto mb-8 sm:mb-10 md:mb-12">
-              <Paragraph className="text-sm sm:text-base md:text-lg lg:text-xl text-blue-100 leading-relaxed mb-0">
-                Upload your PCAP files and get comprehensive network analysis reports with 
-                security insights, performance metrics, and visual network diagrams.
-              </Paragraph>
-            </div>
-            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center max-w-md sm:max-w-lg mx-auto">
-              <Link href="/upload" className="w-full sm:w-auto">
-                <Button type="primary" size="large" icon={<CloudUploadOutlined />} className="w-full sm:w-auto min-w-[140px]">
-                  Start Analysis
-                </Button>
-              </Link>
-              <Link href="/reports" className="w-full sm:w-auto">
-                <Button type="default" size="large" ghost className="w-full sm:w-auto min-w-[140px]">
-                  View Reports
-                </Button>
-              </Link>
+              </h1>
+              
+              {/* Action Buttons */}
+              <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
+                <Link href="/upload">
+                  <Button type="primary" size="large" icon={<CloudUploadOutlined />} className="min-w-[160px] h-12">
+                    Start Analysis
+                  </Button>
+                </Link>
+                <Link href="/reports">
+                  <Button type="default" size="large" ghost className="min-w-[160px] h-12">
+                    View Reports
+                  </Button>
+                </Link>
+              </div>
+              
+              {/* Description */}
+              <div className="max-w-4xl mx-auto">
+                <p className="text-lg md:text-xl text-blue-100 leading-relaxed">
+                  Upload your PCAP files and get comprehensive network analysis reports with 
+                  security insights, performance metrics, and visual network diagrams.
+                </p>
+              </div>
             </div>
           </div>
         </div>
