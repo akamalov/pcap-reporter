@@ -16,7 +16,7 @@ celery_app = Celery(
     backend=settings.CELERY_RESULT_BACKEND,
     include=[
         "tasks.analysis_tasks",
-        "tasks.report_tasks",
+        # "tasks.report_tasks",  # TODO: Create this module
     ]
 )
 
@@ -44,7 +44,7 @@ celery_app.conf.update(
     # Task routing
     task_routes={
         "tasks.analysis_tasks.*": {"queue": "analysis"},
-        "tasks.report_tasks.*": {"queue": "reports"},
+        # "tasks.report_tasks.*": {"queue": "reports"},  # TODO: Uncomment when module exists
     },
     
     # Task annotations
@@ -54,10 +54,10 @@ celery_app.conf.update(
             "time_limit": settings.ANALYSIS_TIMEOUT,
             "soft_time_limit": settings.ANALYSIS_TIMEOUT - 30,
         },
-        "tasks.report_tasks.generate_pdf_report": {
-            "rate_limit": "20/m",
-            "time_limit": 120,
-        },
+        # "tasks.report_tasks.generate_pdf_report": {  # TODO: Uncomment when module exists
+        #     "rate_limit": "20/m",
+        #     "time_limit": 120,
+        # },
     },
     
     # Monitoring
@@ -66,14 +66,14 @@ celery_app.conf.update(
     
     # Beat schedule (for periodic tasks)
     beat_schedule={
-        "cleanup-old-reports": {
-            "task": "tasks.maintenance_tasks.cleanup_old_reports",
-            "schedule": 3600.0,  # Every hour
-        },
-        "health-check": {
-            "task": "tasks.maintenance_tasks.health_check",
-            "schedule": 300.0,  # Every 5 minutes
-        },
+        # "cleanup-old-reports": {  # TODO: Uncomment when maintenance_tasks module exists
+        #     "task": "tasks.maintenance_tasks.cleanup_old_reports",
+        #     "schedule": 3600.0,  # Every hour
+        # },
+        # "health-check": {  # TODO: Uncomment when maintenance_tasks module exists
+        #     "task": "tasks.maintenance_tasks.health_check",
+        #     "schedule": 300.0,  # Every 5 minutes
+        # },
     },
 )
 

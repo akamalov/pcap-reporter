@@ -71,13 +71,13 @@ export default function HomePage() {
       <Content className="bg-gray-50">
         {/* Hero Section */}
         <section className="bg-gradient-to-r from-blue-600 to-purple-600 text-white min-h-[600px] flex items-center">
-          <div className="container px-4 sm:px-6 lg:px-8 py-12" style={{ marginLeft: '8%', marginRight: 'auto' }}>
+          <div className="py-12" style={{ marginLeft: '10%', marginRight: 'auto', width: '100%' }}>
             <div className="max-w-4xl text-left">
               <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-8 leading-[1.1]">
                 Professional PCAP Analysis Made Simple
               </h1>
               
-              <p className="text-lg sm:text-xl md:text-2xl text-blue-100 mb-10 leading-relaxed max-w-3xl mx-auto px-4">
+              <p className="text-lg sm:text-xl md:text-2xl text-blue-100 mb-10 leading-relaxed max-w-3xl">
                 Upload PCAP files. Get instant analysis reports.
               </p>
               
@@ -109,9 +109,9 @@ export default function HomePage() {
 
         {/* Features Section */}
         <section className="bg-slate-800 text-white" style={{ paddingTop: '48px', paddingBottom: '48px', paddingLeft: '24px', paddingRight: '24px' }}>
-          <div className="container max-w-6xl" style={{ marginLeft: '8%', marginRight: 'auto' }}>
+          <div className="container max-w-6xl" style={{ marginLeft: '9%', marginRight: 'auto' }}>
             <div className="text-left mb-12 lg:mb-16">
-              <Title level={2} className="mb-4 text-2xl sm:text-3xl md:text-4xl font-bold px-4 text-white">
+              <Title level={2} className="mb-4 text-2xl sm:text-3xl md:text-4xl font-bold text-white">
                 Key Features
               </Title>
               <Paragraph className="text-lg sm:text-xl text-gray-300 max-w-3xl leading-relaxed">
@@ -147,7 +147,7 @@ export default function HomePage() {
 
         {/* Stats Section */}
         <section className="bg-slate-800 text-white" style={{ paddingTop: '16px', paddingBottom: '32px' }}>
-          <div className="container max-w-6xl px-4 sm:px-6 lg:px-8" style={{ marginLeft: '12%', marginRight: 'auto' }}>
+          <div className="container max-w-6xl px-4 sm:px-6 lg:px-8" style={{ marginLeft: '10%', marginRight: 'auto' }}>
             <Row gutter={[32, 32]} className="text-left">
               <Col xs={24} sm={8}>
                 <div className="py-8">
@@ -185,7 +185,7 @@ export default function HomePage() {
 
         {/* Call to Action */}
         <section className="bg-slate-800 text-white" style={{ paddingTop: '48px', paddingBottom: '48px' }}>
-          <div className="container max-w-4xl px-4 sm:px-6 lg:px-8" style={{ marginLeft: '9%', marginRight: 'auto' }}>
+          <div className="container max-w-4xl px-4 sm:px-6 lg:px-8" style={{ marginLeft: '10%', marginRight: 'auto' }}>
             <Title level={2} className="mb-6 text-2xl sm:text-3xl md:text-4xl font-bold text-white text-left">
               Ready to Analyze Your Network Traffic?
             </Title>
@@ -211,7 +211,7 @@ export default function HomePage() {
 
       {/* Footer */}
       <Footer className="bg-slate-800 text-white">
-        <div className="container max-w-6xl px-4 sm:px-6 lg:px-8" style={{ marginLeft: '7%', marginRight: 'auto' }}>
+        <div className="container max-w-6xl px-4 sm:px-6 lg:px-8" style={{ marginLeft: '9%', marginRight: 'auto' }}>
           <Row gutter={[32, 32]} className="py-8">
             <Col xs={24} md={8}>
               <div className="flex items-center space-x-3 mb-4">
@@ -249,7 +249,7 @@ export default function HomePage() {
           </Row>
           <Divider className="border-gray-600 my-6" />
           <div className="text-center text-gray-400 pb-4">
-            <Text>© 2024 PCAP Reporter. Built with Next.js, FastAPI, and modern web technologies.</Text>
+            <Text>© 2025 PCAP Reporter. Built with Next.js, FastAPI, and modern web technologies.</Text>
           </div>
         </div>
       </Footer>

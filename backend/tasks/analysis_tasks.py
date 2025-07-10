@@ -11,11 +11,24 @@ from celery import current_task
 from celery.exceptions import Retry
 
 from core.celery_app import celery_app
+from core.database import init_db
 from models.report import Report, ReportStatus
 from models.analysis_job import AnalysisJob, JobStatus
 from services.pcap_analysis_service import PcapAnalysisService
 
 logger = logging.getLogger(__name__)
+
+
+async def ensure_db_initialized():
+    """
+    Ensure database is initialized for Celery tasks.
+    """
+    try:
+        await init_db()
+        logger.info("Database initialized for Celery task")
+    except Exception as e:
+        logger.error(f"Failed to initialize database for Celery task: {e}")
+        raise
 
 
 @celery_app.task(bind=True, name="analyze_pcap_file")
@@ -35,6 +48,9 @@ def analyze_pcap_file(self, report_id: str, file_path: str) -> Dict[str, Any]:
     
     async def run_analysis():
         try:
+            # Initialize database connection
+            await ensure_db_initialized()
+            
             # Get the report
             report = await Report.get(report_id)
             if not report:
@@ -167,6 +183,7 @@ def analyze_pcap_file(self, report_id: str, file_path: str) -> Dict[str, Any]:
             
             # Update report status
             try:
+                await ensure_db_initialized()
                 report = await Report.get(report_id)
                 if report:
                     report.status = ReportStatus.FAILED
@@ -223,6 +240,9 @@ def cleanup_old_reports(self, days_old: int = 30) -> Dict[str, Any]:
     
     async def run_cleanup():
         try:
+            # Initialize database connection
+            await ensure_db_initialized()
+            
             cutoff_date = datetime.utcnow() - timedelta(days=days_old)
             
             # Find old reports
@@ -299,6 +319,9 @@ def validate_pcap_file(self, file_path: str) -> Dict[str, Any]:
     
     async def run_validation():
         try:
+            # Initialize database connection
+            await ensure_db_initialized()
+            
             # Initialize the analysis service for validation
             analysis_service = PcapAnalysisService()
             
@@ -367,6 +390,9 @@ def generate_report_summary(self, report_id: str) -> Dict[str, Any]:
     
     async def run_summary():
         try:
+            # Initialize database connection
+            await ensure_db_initialized()
+            
             # Get the report
             report = await Report.get(report_id)
             if not report:

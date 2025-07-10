@@ -59,7 +59,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       Layout: {
         headerBg: currentTheme === 'dark' ? '#141414' : '#001529',
         headerPadding: '0 24px',
-        bodyBg: currentTheme === 'dark' ? '#f9fafb' : '#f0f2f5',
+        bodyBg: currentTheme === 'dark' ? '#1e293b' : '#f0f2f5',
         siderBg: currentTheme === 'dark' ? '#141414' : '#001529',
       },
       Menu: {

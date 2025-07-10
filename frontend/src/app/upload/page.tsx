@@ -130,15 +130,17 @@ export default function UploadPage() {
       {/* Header */}
       <Header className="bg-slate-800 shadow-lg">
         <div className="max-w-7xl mx-auto px-4 lg:px-6 flex items-center justify-between h-32">
-          <Link href="/" className="flex items-center space-x-3 flex-shrink-0">
-            <GlobalOutlined className="text-white text-2xl" />
-            <div style={{ marginLeft: '-7px' }}>
+          <div className="flex items-center flex-shrink-0">
+            <Link href="/" className="flex items-center">
+              <GlobalOutlined className="text-white text-2xl" />
+              <Title level={3} className="text-white mb-0 hidden sm:block" style={{ marginLeft: '24px', marginRight: '10px' }}>
+                PCAP Reporter
+              </Title>
+            </Link>
+            <div style={{ marginLeft: '12px' }}>
               <ThemeToggle />
             </div>
-            <Title level={3} className="text-white mb-0 hidden sm:block">
-              PCAP Reporter
-            </Title>
-          </Link>
+          </div>
           <div className="flex items-center space-x-3 flex-shrink-0">
             <Link href="/reports">
               <Button 
@@ -312,9 +314,12 @@ export default function UploadPage() {
       </Content>
 
       {/* Flexible spacer section that adapts to theme */}
-      <div className="flex-1 transition-colors duration-300 min-h-32" style={{ 
-        backgroundColor: theme === 'dark' ? '#1e293b' : '#f9fafb'
-      }}>
+      <div 
+        className="flex-1 transition-colors duration-300 min-h-32" 
+        style={{ 
+          backgroundColor: theme === 'dark' ? '#1e293b' : '#f9fafb'
+        }}
+      >
         {/* This section stretches to fill remaining space and matches the current theme */}
       </div>
 

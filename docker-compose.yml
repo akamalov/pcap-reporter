@@ -61,7 +61,7 @@ services:
         USER_ID: ${USER_ID:-1000}
         GROUP_ID: ${GROUP_ID:-1000}
     container_name: pcap-reporter-celery-worker
-    command: celery -A main.celery worker --loglevel=info --concurrency=4
+    command: celery -A core.celery_app worker --loglevel=info --concurrency=4
     environment:
       - ENVIRONMENT=production
       - DATABASE_URL=mongodb://mongodb:27017/pcap_reporter
@@ -88,7 +88,7 @@ services:
         USER_ID: ${USER_ID:-1000}
         GROUP_ID: ${GROUP_ID:-1000}
     container_name: pcap-reporter-celery-beat
-    command: celery -A main.celery beat --loglevel=info
+    command: celery -A core.celery_app beat --loglevel=info
     environment:
       - ENVIRONMENT=production
       - DATABASE_URL=mongodb://mongodb:27017/pcap_reporter
@@ -115,7 +115,7 @@ services:
         USER_ID: ${USER_ID:-1000}
         GROUP_ID: ${GROUP_ID:-1000}
     container_name: pcap-reporter-flower
-    command: celery -A main.celery flower --port=5555
+    command: celery -A core.celery_app flower --port=5555
     environment:
       - ENVIRONMENT=production
       - DATABASE_URL=mongodb://mongodb:27017/pcap_reporter

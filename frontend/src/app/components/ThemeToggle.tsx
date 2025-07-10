@@ -8,12 +8,17 @@ import { useTheme } from './ThemeProvider';
 export const ThemeToggle: React.FC = () => {
   const { theme, toggleTheme } = useTheme();
 
+  const handleToggle = () => {
+    console.log('Theme toggle clicked, current theme:', theme);
+    toggleTheme();
+  };
+
   return (
     <Tooltip title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}>
       <Button
         type="text"
         icon={theme === 'light' ? <BulbOutlined /> : <BulbFilled />}
-        onClick={toggleTheme}
+        onClick={handleToggle}
         style={{
           color: theme === 'light' ? '#fff' : '#fff',
           fontSize: '20px',
