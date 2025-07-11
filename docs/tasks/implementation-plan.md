@@ -45,34 +45,34 @@ This document outlines the phased implementation plan for the MCP PCAP Reporter 
 
 ---
 
-## Phase 1: Backend Core & API Development
+## Phase 1: Backend Core & API Development ✅
 
 **Goal:** Build the core asynchronous backend API, including job submission and status retrieval endpoints, adhering to TDD.
 
-- [ ] **Step 1.1: Setup Backend Testing Framework**
-    - [ ] Add `pytest` and `httpx` to the backend dependencies.
-    - [ ] Configure `pytest` to work with the FastAPI application and the Docker environment.
-- [ ] **Step 1.2: Implement Health Check Endpoint**
-    - [ ] (TDD) Write a test for the `/api/health` endpoint.
-    - [ ] Implement the endpoint to return a success status, confirming DB and Redis connectivity.
-- [ ] **Step 1.3: Implement Analysis Job Submission Endpoint**
-    - [ ] (TDD) Write tests for the `start_pcap_analysis` MCP tool endpoint (`/api/analyze`).
+- [x] **Step 1.1: Setup Backend Testing Framework**
+    - [x] Add `pytest` and `httpx` to the backend dependencies.
+    - [x] Configure `pytest` to work with the FastAPI application and the Docker environment.
+- [x] **Step 1.2: Implement Health Check Endpoint**
+    - [x] (TDD) Write a test for the `/api/health` endpoint.
+    - [x] Implement the endpoint to return a success status, confirming DB and Redis connectivity.
+- [x] **Step 1.3: Implement Analysis Job Submission Endpoint**
+    - [x] (TDD) Write tests for the `start_pcap_analysis` MCP tool endpoint (`/api/analyze`).
         - Test valid PCAP file upload.
         - Test that it correctly enqueues a Celery task.
         - Test that it returns a valid `job_id`.
         - Test invalid inputs (e.g., wrong file type).
-    - [ ] Implement the endpoint logic using FastAPI's `UploadFile`.
-    - [ ] The endpoint should save the uploaded file to a shared volume and pass the file path to the Celery task.
-- [ ] **Step 1.4: Implement Job Status/Result Endpoint**
-    - [ ] (TDD) Write tests for the `get_analysis_report` MCP tool endpoint (`/api/report/{job_id}`).
+    - [x] Implement the endpoint logic using FastAPI's `UploadFile`.
+    - [x] The endpoint should save the uploaded file to a shared volume and pass the file path to the Celery task.
+- [x] **Step 1.4: Implement Job Status/Result Endpoint**
+    - [x] (TDD) Write tests for the `get_analysis_report` MCP tool endpoint (`/api/report/{job_id}`).
         - Test retrieving status for a "PENDING" job.
         - Test retrieving status for a "COMPLETED" job.
         - Test retrieving status for a "FAILED" job.
         - Test retrieving JSON results for a completed job.
         - Test for a non-existent `job_id`.
-    - [ ] Implement the endpoint logic, which queries the Celery backend (Redis) for task state and retrieves final results from MongoDB.
-- [ ] **Phase 1 Documentation:**
-    - [ ] Create/update `docs/docs/application-documentation.md` with an "API Endpoints" section, detailing the new endpoints with request/response examples.
+    - [x] Implement the endpoint logic, which queries the Celery backend (Redis) for task state and retrieves final results from MongoDB.
+- [x] **Phase 1 Documentation:**
+    - [x] Create/update `docs/docs/application-documentation.md` with an "API Endpoints" section, detailing the new endpoints with request/response examples.
 
 ---
 
