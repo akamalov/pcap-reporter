@@ -29,13 +29,14 @@ services:
     container_name: pcap-reporter-api
     environment:
       - ENVIRONMENT=production
-      - DATABASE_URL=mongodb://mongodb:27017/pcap_reporter
+      - DATABASE_URL=mongodb://admin:${MONGO_PASSWORD:-admin123}@mongodb:27017/pcap_reporter?authSource=admin
       - REDIS_URL=redis://redis:6379/0
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
       - SECRET_KEY=${SECRET_KEY:-your-secret-key-change-in-production}
-      - ALLOWED_HOSTS=localhost,127.0.0.1
       - DEBUG=false
+    ports:
+      - "8000:8000"
     volumes:
       - ./uploads:/app/uploads
       - ./logs:/app/logs
@@ -64,7 +65,7 @@ services:
     command: celery -A core.celery_app worker --loglevel=info --concurrency=4
     environment:
       - ENVIRONMENT=production
-      - DATABASE_URL=mongodb://mongodb:27017/pcap_reporter
+      - DATABASE_URL=mongodb://admin:${MONGO_PASSWORD:-admin123}@mongodb:27017/pcap_reporter?authSource=admin
       - REDIS_URL=redis://redis:6379/0
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
@@ -91,7 +92,7 @@ services:
     command: celery -A core.celery_app beat --loglevel=info
     environment:
       - ENVIRONMENT=production
-      - DATABASE_URL=mongodb://mongodb:27017/pcap_reporter
+      - DATABASE_URL=mongodb://admin:${MONGO_PASSWORD:-admin123}@mongodb:27017/pcap_reporter?authSource=admin
       - REDIS_URL=redis://redis:6379/0
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
@@ -118,7 +119,7 @@ services:
     command: celery -A core.celery_app flower --port=5555
     environment:
       - ENVIRONMENT=production
-      - DATABASE_URL=mongodb://mongodb:27017/pcap_reporter
+      - DATABASE_URL=mongodb://admin:${MONGO_PASSWORD:-admin123}@mongodb:27017/pcap_reporter?authSource=admin
       - REDIS_URL=redis://redis:6379/0
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0

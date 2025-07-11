@@ -26,9 +26,9 @@ class AnalysisJob(Document):
     """
     
     # Job identification
-    job_id: Indexed(str)  # Our custom job ID
+    job_id: str  # Our custom job ID
     celery_task_id: Optional[str] = None  # Celery task ID
-    report_id: Indexed(PydanticObjectId)  # Reference to the report
+    report_id: PydanticObjectId  # Reference to the report
     
     # Analysis configuration
     options: Optional[Dict[str, Any]] = None
@@ -36,7 +36,7 @@ class AnalysisJob(Document):
     
     # Status and timing
     status: JobStatus = JobStatus.PENDING
-    created_at: Indexed(datetime) = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
     started_at: Optional[datetime] = None
     completed_at: Optional[datetime] = None
     

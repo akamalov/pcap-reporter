@@ -47,6 +47,12 @@ class Settings(BaseSettings):
             return [i.strip() for i in v.split(",")]
         return v
     
+    @validator("ALLOWED_HOSTS", pre=True)
+    def assemble_allowed_hosts(cls, v):
+        if isinstance(v, str):
+            return [i.strip() for i in v.split(",")]
+        return v
+    
     # File Storage
     UPLOAD_PATH: str = "/app/uploads"
     LOG_PATH: str = "/app/logs"

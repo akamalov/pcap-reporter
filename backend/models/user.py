@@ -18,8 +18,8 @@ class User(Document):
     """
     
     # Basic user information
-    username: Indexed(str)  # Unique username
-    email: Indexed(EmailStr)  # Unique email
+    username: str  # Unique username
+    email: EmailStr  # Unique email
     hashed_password: str
     
     # User status
@@ -27,7 +27,7 @@ class User(Document):
     is_admin: bool = False
     
     # Timestamps
-    created_at: Indexed(datetime) = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     last_login: Optional[datetime] = None
     

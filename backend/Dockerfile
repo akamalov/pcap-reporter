@@ -24,8 +24,14 @@ WORKDIR /app
 
 # Copy requirements and install Python dependencies
 COPY requirements.txt .
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir --user -r requirements.txt
+RUN pip install --no-cache-dir --upgrade pip
+
+# Switch to app user and install packages
+USER app
+RUN pip install --no-cache-dir --user -r requirements.txt
+
+# Switch back to root for remaining setup
+USER root
 
 # Production stage
 FROM python:3.11-slim

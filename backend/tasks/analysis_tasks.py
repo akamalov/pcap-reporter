@@ -15,6 +15,8 @@ from core.database import init_db
 from models.report import Report, ReportStatus
 from models.analysis_job import AnalysisJob, JobStatus
 from services.pcap_analysis_service import PcapAnalysisService
+from services.streaming_pcap_service import StreamingPcapService, StreamingConfig
+from services.websocket_service import websocket_service
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +37,7 @@ async def ensure_db_initialized():
 def analyze_pcap_file(self, report_id: str, file_path: str) -> Dict[str, Any]:
     """
     Analyze a PCAP file and update the report with results.
+    Enhanced with streaming support for large files.
     
     Args:
         report_id: ID of the report to update
@@ -67,7 +70,7 @@ def analyze_pcap_file(self, report_id: str, file_path: str) -> Dict[str, Any]:
                 analysis_job = AnalysisJob(
                     job_id=task_id,
                     report_id=report_id,
-                    status=JobStatus.STARTED,  # Updated to use correct enum value
+                    status=JobStatus.STARTED,
                     progress=0,
                     current_step="Starting analysis..."
                 )
@@ -89,24 +92,64 @@ def analyze_pcap_file(self, report_id: str, file_path: str) -> Dict[str, Any]:
                         "report_id": report_id
                     }
                 )
+                
+                # Send real-time WebSocket update
+                try:
+                    await websocket_service.send_progress_update(
+                        job_id=task_id,
+                        progress=progress,
+                        message=message,
+                        status="processing",
+                        details={
+                            "report_id": report_id,
+                            "file_size_mb": file_size_mb if 'file_size_mb' in locals() else 0
+                        }
+                    )
+                except Exception as ws_error:
+                    logger.warning(f"Failed to send WebSocket update: {ws_error}")
             
-            # Initialize the new PCAP analysis service
-            analysis_service = PcapAnalysisService()
+            # Determine file size and choose appropriate service
+            file_size = os.path.getsize(file_path)
+            file_size_mb = file_size / (1024 * 1024)
             
-            # Update progress
             await progress_callback(10, "Initializing analysis...")
             
-            # Perform the analysis using the new service
-            await progress_callback(25, "Extracting basic statistics...")
-            analysis_results = await analysis_service.analyze_pcap_file(
-                file_path, 
-                options=getattr(analysis_job, 'options', {})
-            )
+            # Use streaming service for large files (>100MB)
+            if file_size_mb > 100:
+                logger.info(f"Using streaming analysis for large file: {file_size_mb:.1f}MB")
+                
+                # Configure streaming service based on file size
+                config = StreamingConfig(
+                    chunk_size_mb=min(100, max(50, int(file_size_mb / 8))),  # Adaptive chunk size
+                    parallel_workers=min(4, max(2, int(file_size_mb / 200))),  # Scale workers with file size
+                    max_memory_mb=512,
+                    enable_progress_updates=True
+                )
+                
+                streaming_service = StreamingPcapService(config)
+                analysis_results = await streaming_service.analyze_large_pcap(
+                    file_path, 
+                    progress_callback
+                )
+                
+                # Get streaming statistics
+                streaming_stats = streaming_service.get_processing_stats()
+                logger.info(f"Streaming analysis completed: {streaming_stats}")
+                
+            else:
+                # Use regular analysis service for smaller files
+                logger.info(f"Using regular analysis for file: {file_size_mb:.1f}MB")
+                analysis_service = PcapAnalysisService()
+                
+                await progress_callback(25, "Extracting basic statistics...")
+                analysis_results = await analysis_service.analyze_pcap_file(
+                    file_path, 
+                    options=getattr(analysis_job, 'options', {})
+                )
             
             await progress_callback(90, "Finalizing results...")
             
             # Convert AnalysisResults to the format expected by the Report model
-            # For now, we'll store the results as a dict until we update the Report model
             results_dict = {
                 "file_path": analysis_results.file_path,
                 "file_size": analysis_results.file_size,
@@ -145,7 +188,8 @@ def analyze_pcap_file(self, report_id: str, file_path: str) -> Dict[str, Any]:
                 ],
                 "start_time": analysis_results.start_time,
                 "end_time": analysis_results.end_time,
-                "processing_time": analysis_results.processing_time
+                "processing_time": analysis_results.processing_time,
+                "analysis_options": analysis_results.analysis_options
             }
             
             # Update report with results
@@ -169,12 +213,17 @@ def analyze_pcap_file(self, report_id: str, file_path: str) -> Dict[str, Any]:
                 "task_id": task_id,
                 "message": "Analysis completed successfully",
                 "results_summary": {
-                    "total_packets": analysis_results.total_packets,
-                    "duration": analysis_results.duration,
-                    "unique_protocols": len([p for p in analysis_results.protocols.values() if p > 0]),
-                    "top_protocol": max(analysis_results.protocols.items(), key=lambda x: x[1])[0] if analysis_results.protocols else "Unknown",
+                    "total_packets": analysis_results.traffic_stats.total_packets,
+                    "duration": analysis_results.traffic_stats.duration,
+                    "unique_protocols": len([p for p in [
+                        analysis_results.protocol_stats.tcp_packets,
+                        analysis_results.protocol_stats.udp_packets,
+                        analysis_results.protocol_stats.icmp_packets
+                    ] if p > 0]),
                     "issues_found": len(analysis_results.issues),
-                    "throughput_mbps": analysis_results.performance_metrics.throughput_mbps
+                    "throughput_mbps": analysis_results.performance_metrics.throughput_mbps,
+                    "file_size_mb": file_size_mb,
+                    "processing_method": "streaming" if file_size_mb > 100 else "regular"
                 }
             }
             
