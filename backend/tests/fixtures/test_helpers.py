@@ -198,6 +198,143 @@ class PcapTestHelper:
 
 
 # Global test helper instance
+test_helper = PcapTestHelper()
+
+
+def create_sample_pcap_files():
+    """Create sample PCAP files for testing."""
+    return test_helper.regenerate_fixtures()
+
+
+def get_test_pcap_path(fixture_name: str = 'normal_traffic'):
+    """Get path to a test PCAP file."""
+    return test_helper.get_fixture_path(fixture_name)
+
+
+def create_mock_analysis_results():
+    """Create mock analysis results for testing storage operations."""
+    from models.analysis_results import (
+        AnalysisResults, TrafficStats, PerformanceMetrics, ProtocolStats,
+        NetworkIssue, SeverityLevel, IssueType, ConversationFlow
+    )
+    from datetime import datetime
+    
+    # Create traffic stats
+    traffic_stats = TrafficStats(
+        total_packets=1000,
+        total_bytes=1500000,
+        duration=300.0,
+        avg_packet_size=1500.0,
+        packets_per_second=3.33,
+        bytes_per_second=5000.0
+    )
+    
+    # Create performance metrics
+    performance_metrics = PerformanceMetrics(
+        avg_latency=0.05,
+        max_latency=0.25,
+        min_latency=0.01,
+        packet_loss_rate=0.02,
+        throughput_mbps=40.0,
+        jitter=0.008,
+        retransmission_rate=0.01
+    )
+    
+    # Create protocol stats
+    protocol_stats = ProtocolStats(
+        tcp_packets=800,
+        udp_packets=150,
+        icmp_packets=10,
+        http_sessions=25,
+        https_sessions=15,
+        dns_queries=40,
+        dhcp_packets=5,
+        arp_packets=10,
+        other_packets=5
+    )
+    
+    # Create network issues
+    issues = [
+        NetworkIssue(
+            type=IssueType.PERFORMANCE,
+            severity=SeverityLevel.MEDIUM,
+            description="High latency detected on some connections",
+            affected_hosts=["192.168.1.10", "192.168.1.20"],
+            affected_protocols=["TCP", "HTTP"],
+            recommendation="Check network configuration and bandwidth",
+            confidence=0.85
+        ),
+        NetworkIssue(
+            type=IssueType.SECURITY,
+            severity=SeverityLevel.LOW,
+            description="Port scan detected from external source",
+            affected_hosts=["192.168.1.100"],
+            affected_protocols=["TCP"],
+            recommendation="Review firewall rules and monitor source",
+            confidence=0.75
+        )
+    ]
+    
+    # Create conversations
+    conversations = [
+        ConversationFlow(
+            src_ip="192.168.1.10",
+            dst_ip="93.184.216.34",
+            src_port=54321,
+            dst_port=80,
+            protocol="TCP",
+            packets_sent=50,
+            packets_received=48,
+            bytes_sent=25000,
+            bytes_received=120000,
+            duration=15.5,
+            start_time="2024-01-01T10:00:00Z",
+            end_time="2024-01-01T10:00:15Z"
+        )
+    ]
+    
+    # Create analysis results
+    results = AnalysisResults(
+        file_path="/test/uploads/test_traffic.pcap",
+        file_size=1024000,
+        analysis_timestamp=datetime.utcnow().isoformat(),
+        traffic_stats=traffic_stats,
+        performance_metrics=performance_metrics,
+        protocol_stats=protocol_stats,
+        issues=issues,
+        top_conversations=conversations,
+        start_time="2024-01-01T10:00:00Z",
+        end_time="2024-01-01T10:05:00Z",
+        analysis_options={"analysis_type": "comprehensive", "priority": "normal"},
+        processing_time=45.2
+    )
+    
+    return results
+
+
+def create_mock_triage_results():
+    """Create mock triage analysis results for testing."""
+    return {
+        "triage_summary": {
+            "total_packets": 500,
+            "total_bytes": 750000,
+            "duration": 150.0,
+            "protocols": {
+                "TCP": {"packets": 400, "percentage": 80.0},
+                "UDP": {"packets": 75, "percentage": 15.0},
+                "ICMP": {"packets": 25, "percentage": 5.0}
+            },
+            "top_talkers": [
+                {"ip": "192.168.1.10", "packets": 200, "bytes": 300000},
+                {"ip": "192.168.1.20", "packets": 150, "bytes": 225000}
+            ],
+            "issues_detected": [
+                {"type": "DNS_TIMEOUT", "severity": "MEDIUM", "count": 3},
+                {"type": "TCP_RETRANSMISSION", "severity": "LOW", "count": 5}
+            ],
+            "analysis_timestamp": datetime.utcnow().isoformat()
+        }
+    }
 pcap_helper = PcapTestHelper()
 
 
