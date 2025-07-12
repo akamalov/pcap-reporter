@@ -429,6 +429,118 @@ section {
   transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
 }
 
+/* Improved focus styles for accessibility */
+.ant-btn:focus-visible,
+.ant-input:focus-visible,
+.ant-select-selector:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+/* Enhanced button styles */
+.btn-primary {
+  @apply h-10 px-4 text-sm font-medium rounded-lg;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease;
+}
+
+.btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.1);
+}
+
+.btn-secondary {
+  @apply h-8 px-3 text-sm rounded-lg;
+}
+
+/* Loading animations */
+@keyframes shimmer {
+  0% {
+    background-position: -468px 0;
+  }
+  100% {
+    background-position: 468px 0;
+  }
+}
+
+.loading-shimmer {
+  animation: shimmer 1.5s infinite linear;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 400% 100%;
+}
+
+.dark .loading-shimmer {
+  background: linear-gradient(90deg, #334155 25%, #475569 50%, #334155 75%);
+  background-size: 400% 100%;
+}
+
+/* Error states */
+.error-shake {
+  animation: shake 0.5s ease-in-out;
+}
+
+@keyframes shake {
+  0%, 20%, 40%, 60%, 80% {
+    transform: translateX(0);
+  }
+  10%, 30%, 50%, 70%, 90% {
+    transform: translateX(-5px);
+  }
+}
+
+/* Success animations */
+.success-pulse {
+  animation: pulse-success 0.6s ease;
+}
+
+@keyframes pulse-success {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Improved table responsive behavior */
+.ant-table-wrapper {
+  overflow-x: auto;
+}
+
+@media (max-width: 768px) {
+  .ant-table-thead > tr > th {
+    padding: 8px 4px;
+    font-size: 12px;
+  }
+  
+  .ant-table-tbody > tr > td {
+    padding: 8px 4px;
+    font-size: 12px;
+  }
+}
+
+/* Better mobile responsive utilities */
+@media (max-width: 640px) {
+  .mobile-hidden {
+    display: none !important;
+  }
+  
+  .mobile-full-width {
+    width: 100% !important;
+  }
+  
+  .mobile-stack {
+    flex-direction: column !important;
+  }
+  
+  .mobile-text-center {
+    text-align: center !important;
+  }
+}
+
 /* Custom scrollbar for dark mode - MCP style */
 .dark ::-webkit-scrollbar {
   width: 8px;

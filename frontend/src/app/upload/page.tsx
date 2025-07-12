@@ -33,6 +33,7 @@ import { ApiService, handleApiError, formatFileSize } from '@/lib/api'
 import type { UploadResponse } from '@/lib/api'
 import { ThemeToggle } from '../components/ThemeToggle'
 import { useTheme } from '../components/ThemeProvider'
+import { AppHeader } from '@/components'
 
 const { Header, Content, Footer } = Layout
 const { Title, Paragraph, Text } = Typography
@@ -54,14 +55,22 @@ export default function UploadPage() {
     const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase()
     
     if (!allowedTypes.includes(fileExtension)) {
-      message.error(`Invalid file type. Please upload ${allowedTypes.join(', ')} files only.`)
+      message.error({
+        content: `Invalid file type. Please upload ${allowedTypes.join(', ')} files only.`,
+        duration: 5,
+        style: { marginTop: '20vh' }
+      })
       return false
     }
 
     // Validate file size (100MB limit)
     const maxSize = 100 * 1024 * 1024 // 100MB
     if (file.size > maxSize) {
-      message.error('File size exceeds 100MB limit.')
+      message.error({
+        content: 'File size exceeds 100MB limit. Please choose a smaller file.',
+        duration: 5,
+        style: { marginTop: '20vh' }
+      })
       return false
     }
 
@@ -88,7 +97,11 @@ export default function UploadPage() {
       setUploadProgress(100)
       setUploadedFiles(prev => [result, ...prev])
       
-      message.success(`File uploaded successfully! Analysis started.`)
+      message.success({
+        content: `File uploaded successfully! Analysis started.`,
+        duration: 3,
+        style: { marginTop: '20vh' }
+      })
       
       // Redirect to the report page after a short delay
       setTimeout(() => {
@@ -128,39 +141,27 @@ export default function UploadPage() {
   return (
     <Layout className="min-h-screen flex flex-col" style={{ backgroundColor: '#f9fafb' }}>
       {/* Header */}
-      <Header className="bg-slate-800 shadow-lg">
-        <div className="max-w-7xl mx-auto px-4 lg:px-6 flex items-center justify-between h-32">
-          <div className="flex items-center flex-shrink-0">
-            <Link href="/" className="flex items-center">
-              <GlobalOutlined className="text-white text-2xl" />
-              <Title level={3} className="text-white mb-0 hidden sm:block" style={{ marginLeft: '24px', marginRight: '10px' }}>
-                PCAP Reporter
-              </Title>
-            </Link>
-            <div style={{ marginLeft: '12px' }}>
-              <ThemeToggle />
-            </div>
-          </div>
-          <div className="flex items-center space-x-3 flex-shrink-0">
-            <Link href="/reports">
-              <Button 
-                type="default" 
-                icon={<FileTextOutlined />} 
-                className="h-8 px-4 text-sm"
-              >
-                <span className="hidden sm:inline">View Reports</span>
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </Header>
+      <AppHeader 
+        title="Upload PCAP File"
+        actions={
+          <Link href="/reports">
+            <Button 
+              type="default" 
+              icon={<FileTextOutlined />} 
+              className="h-8 px-4 text-sm"
+            >
+              <span className="hidden sm:inline">View Reports</span>
+            </Button>
+          </Link>
+        }
+      />
 
       {/* Main Content */}
       <Content className="bg-gray-50 p-6">
         <div className="max-w-4xl mx-auto">
           
           {/* Page Header */}
-          <div className="mb-8" style={{ marginTop: '120px', paddingTop: '60px', marginLeft: '20px' }}>
+          <div className="mb-8">
             <Title level={2} className="mb-2 text-xl sm:text-2xl md:text-3xl">
               Upload PCAP File
             </Title>

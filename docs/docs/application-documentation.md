@@ -1,187 +1,580 @@
-# MCP-PCAP Reporter: Application Documentation
+# MCP-PCAP Reporter: Complete Application Documentation v1.0
 
-This document provides comprehensive documentation for the MCP-PCAP Reporter application, covering its architecture, setup, API, and usage. It will be updated as each implementation phase is completed.
+This document provides comprehensive documentation for the MCP-PCAP Reporter application, covering its architecture, setup, API, and usage. This is the final version 1.0 documentation after completing all implementation phases.
 
 ---
 
 ## Table of Contents
 
-1. [Current Status](#current-status)
-2. [Frontend Architecture](#frontend-architecture)
-3. [Development Environment](#development-environment)
-4. [Known Issues](#known-issues)
+1. [Project Overview](#project-overview)
+2. [Architecture](#architecture)
+3. [Frontend Architecture](#frontend-architecture)
+4. [Backend Architecture](#backend-architecture)
+5. [Analysis Engine](#analysis-engine)
+6. [API Endpoints](#api-endpoints)
+7. [Report Generation](#report-generation)
+8. [Development Environment](#development-environment)
+9. [Production Deployment](#production-deployment)
+10. [User Guide](#user-guide)
+11. [Troubleshooting](#troubleshooting)
 
 ---
 
-## Current Status
+## Project Overview
 
-### Completed Phases
+The MCP-PCAP Reporter is a comprehensive web application for network packet capture analysis. It provides professional-grade PCAP file analysis with detailed reporting, security scanning, and network visualization capabilities.
 
-✅ **Phase 0: Project Setup & Foundation**
-- Complete Docker-based development environment
-- All services properly configured (nginx, backend-api, backend-worker, frontend, mongodb, redis)
-- Comprehensive project structure and documentation
+### Key Features
 
-✅ **Phase 3: Frontend Foundation & UI Setup**
-- Complete Next.js application with Ant Design integration
-- Responsive landing page with feature highlights
-- Full-featured upload page with drag-and-drop functionality
-- Dynamic report display page with data visualization
-- Theme provider with dark/light mode toggle
-- Comprehensive error handling and user feedback
+- **Comprehensive PCAP Analysis**: Supports .pcap, .pcapng, and .cap file formats
+- **Hybrid Analysis Engine**: Combines tshark (high-speed triage) and Scapy (deep packet inspection)
+- **Professional Reporting**: Generates detailed PDF reports with executive summaries
+- **Network Visualization**: Interactive network diagrams showing communication patterns
+- **Security Analysis**: Advanced threat detection and anomaly identification
+- **Web Interface**: Modern, responsive UI with dark/light theme support
+- **Asynchronous Processing**: Celery-based background processing for scalability
+- **MCP Integration**: Model Context Protocol server for AI-powered analysis
 
-🔄 **Phase 4: End-to-End Integration (Partially Complete)**
-- Frontend successfully connects to backend API endpoints
-- Upload functionality implemented with progress tracking
-- Report page with real-time status polling
-- **BLOCKED**: Backend API permission issue preventing file uploads
+### Technology Stack
 
-### In Progress
+**Frontend:**
+- Next.js 14 with TypeScript
+- Ant Design 5 UI components
+- Tailwind CSS for styling
+- Recharts for data visualization
+- Mermaid.js for network diagrams
 
-- Resolving backend infrastructure issues
-- Backend API permission configuration
+**Backend:**
+- FastAPI with Python 3.11
+- Celery for asynchronous task processing
+- MongoDB for data persistence
+- Redis for task queue and caching
+- Docker containerization
+
+**Analysis Tools:**
+- tshark (Wireshark CLI) for high-speed analysis
+- Scapy for deep packet inspection
+- Custom hybrid analysis engine
+
+---
+
+## Architecture
+
+### System Overview
+
+```
+┌─────────────┐    ┌─────────────┐    ┌─────────────┐
+│   Browser   │    │    Nginx    │    │  Frontend   │
+│             │◄──►│  (Reverse   │◄──►│  (Next.js)  │
+│             │    │   Proxy)    │    │             │
+└─────────────┘    └─────────────┘    └─────────────┘
+                           │
+                           ▼
+┌─────────────┐    ┌─────────────┐    ┌─────────────┐
+│   MongoDB   │◄──►│  Backend    │◄──►│    Redis    │
+│ (Database)  │    │  (FastAPI)  │    │  (Queue)    │
+└─────────────┘    └─────────────┘    └─────────────┘
+                           │
+                           ▼
+                   ┌─────────────┐
+                   │   Celery    │
+                   │  (Workers)  │
+                   └─────────────┘
+```
+
+### Service Architecture
+
+1. **Frontend Service**: Next.js application serving the web interface
+2. **Backend API**: FastAPI service handling REST endpoints
+3. **Worker Service**: Celery workers for PCAP analysis processing
+4. **Database**: MongoDB for storing reports and analysis results
+5. **Cache/Queue**: Redis for task queuing and session storage
+6. **Reverse Proxy**: Nginx for routing and load balancing
 
 ---
 
 ## Frontend Architecture
 
-### Technology Stack
-
-- **Framework**: Next.js 14.0.4 with TypeScript
-- **UI Library**: Ant Design 5.12.8
-- **Styling**: CSS Modules with Tailwind-like utilities
-- **Data Fetching**: SWR 2.2.4 for API calls
-- **HTTP Client**: Axios 1.6.2
-- **Icons**: Ant Design Icons
-- **Visualization**: Recharts 2.8.0 (for future chart implementation)
-- **Diagrams**: Mermaid 10.6.1 (for network diagrams)
-
-### Application Structure
+### Component Structure
 
 ```
-frontend/src/app/
-├── components/
-│   ├── ThemeProvider.tsx    # Theme context provider
-│   └── ThemeToggle.tsx      # Dark/light mode toggle
-├── lib/
-│   └── api.ts              # API service and utilities
-├── page.tsx                # Landing page
-├── layout.tsx              # Root layout with theme provider
-├── globals.css             # Global styles
-├── upload/
-│   └── page.tsx            # File upload page
-└── reports/
-    ├── page.tsx            # Reports listing page
-    └── [id]/
-        └── page.tsx        # Individual report view
+frontend/src/
+├── app/
+│   ├── components/           # Shared UI components
+│   │   ├── AppHeader.tsx     # Consistent header component
+│   │   ├── ErrorBoundary.tsx # Error handling wrapper
+│   │   ├── LoadingOverlay.tsx# Loading states
+│   │   ├── MermaidDiagram.tsx# Network diagram renderer
+│   │   ├── ThemeProvider.tsx # Theme context
+│   │   └── ThemeToggle.tsx   # Dark/light mode toggle
+│   ├── lib/
+│   │   └── api.ts           # API service layer
+│   ├── page.tsx             # Landing page
+│   ├── layout.tsx           # Root layout
+│   ├── globals.css          # Global styles
+│   ├── upload/
+│   │   └── page.tsx         # File upload interface
+│   └── reports/
+│       ├── page.tsx         # Reports listing
+│       └── [id]/
+│           └── page.tsx     # Individual report view
 ```
 
-### Key Features Implemented
+### Key Features
 
-#### 1. Landing Page (`/`)
-- Hero section with compelling value proposition
-- Feature highlights with icons and descriptions
-- Call-to-action buttons for navigation
-- Responsive design for all device sizes
-- Theme toggle integration
+#### 1. Landing Page
+- Professional hero section with feature highlights
+- Responsive design with mobile optimization
+- Clear call-to-action buttons
+- Feature overview cards
+- Performance statistics display
 
-#### 2. Upload Page (`/upload`)
-- Drag-and-drop file upload interface
-- File type validation (PCAP, CAP, PCAPNG)
-- Upload progress tracking
-- Success/error state handling
-- Automatic redirection to report page on success
-- Comprehensive error messaging
+#### 2. Upload Interface
+- Drag-and-drop file upload with validation
+- Support for .pcap, .pcapng, .cap files (up to 100MB)
+- Real-time upload progress tracking
+- Comprehensive error handling and user feedback
+- Automatic redirection to analysis report
 
-#### 3. Report Page (`/reports/[id]`)
-- Dynamic route handling for job IDs
-- Real-time status polling with SWR
-- Loading states and progress indicators
-- Structured data display with Ant Design tables
-- Error handling for failed analyses
+#### 3. Reports Dashboard
+- Searchable and filterable reports table
+- Real-time status updates for processing jobs
+- Bulk operations (delete, download)
+- Advanced filtering by date range, status, filename
+- Responsive table design with mobile support
 
-#### 4. Theme System
-- Light/dark mode toggle
-- Persistent theme preference
-- Ant Design ConfigProvider integration
-- Consistent theming across all components
+#### 4. Report Viewer
+- Comprehensive analysis results display
+- Interactive network diagrams
+- Detailed statistics tables
+- Security findings with severity ratings
+- PDF export functionality
+- Real-time processing status updates
 
-### API Integration
+#### 5. Theme System
+- Consistent dark/light mode implementation
+- Persistent user preferences
+- Smooth transitions between themes
+- Accessible color schemes
 
-#### Service Layer (`lib/api.ts`)
-- Centralized API configuration
-- Error handling utilities
-- File upload with progress tracking
-- Report fetching with status polling
-- Type-safe response interfaces
+---
 
-#### Key API Endpoints
-- `POST /api/analyze` - File upload and analysis job submission
-- `GET /api/report/{job_id}` - Report status and data retrieval
-- `GET /api/health` - Service health check
+## Backend Architecture
 
-### User Experience Features
+### API Structure
 
-- **Responsive Design**: Works seamlessly on desktop, tablet, and mobile
-- **Progressive Enhancement**: Graceful degradation for older browsers
-- **Loading States**: Clear feedback during async operations
-- **Error Handling**: User-friendly error messages and recovery options
-- **Accessibility**: Proper ARIA labels and keyboard navigation
-- **Performance**: Optimized bundle size and lazy loading
+```
+backend/
+├── app/
+│   ├── api/
+│   │   ├── __init__.py
+│   │   ├── analysis.py      # Analysis endpoints
+│   │   ├── reports.py       # Report management
+│   │   └── health.py        # Health checks
+│   ├── core/
+│   │   ├── config.py        # Configuration management
+│   │   ├── database.py      # MongoDB connection
+│   │   └── redis.py         # Redis connection
+│   ├── models/
+│   │   ├── analysis.py      # Analysis data models
+│   │   ├── reports.py       # Report data models
+│   │   └── jobs.py          # Job status models
+│   ├── services/
+│   │   ├── analysis.py      # Analysis service logic
+│   │   ├── pcap_analyzer.py # PCAP analysis engine
+│   │   └── report_generator.py # PDF generation
+│   ├── tasks/
+│   │   └── analysis.py      # Celery tasks
+│   └── main.py              # FastAPI application
+```
+
+### Core Services
+
+#### 1. Analysis Service
+- File upload handling and validation
+- Job creation and status tracking
+- Result aggregation and storage
+- Error handling and recovery
+
+#### 2. PCAP Analyzer
+- Hybrid analysis engine combining tshark and Scapy
+- Protocol detection and classification
+- Security threat identification
+- Performance metric calculation
+- Network topology mapping
+
+#### 3. Report Generator
+- Professional PDF report creation
+- Executive summary generation
+- Technical details formatting
+- Chart and diagram integration
+
+---
+
+## Analysis Engine
+
+### Hybrid Approach
+
+The analysis engine uses a two-stage approach for optimal performance and accuracy:
+
+#### Stage 1: High-Speed Triage (tshark)
+- Basic packet statistics extraction
+- Protocol distribution analysis
+- Top talkers identification
+- Conversation mapping
+- Timeline reconstruction
+
+#### Stage 2: Deep Packet Inspection (Scapy)
+- Detailed protocol analysis
+- Security threat detection
+- Performance bottleneck identification
+- Application layer analysis
+- Custom rule application
+
+### Analysis Capabilities
+
+1. **Network Statistics**
+   - Total packets and bytes processed
+   - Protocol distribution breakdown
+   - Top communication pairs
+   - Traffic timeline analysis
+
+2. **Security Analysis**
+   - Port scan detection
+   - Suspicious traffic patterns
+   - Protocol anomalies
+   - Potential security threats
+
+3. **Performance Analysis**
+   - Latency measurements
+   - Bandwidth utilization
+   - Retransmission analysis
+   - Connection quality metrics
+
+4. **Application Analysis**
+   - HTTP/HTTPS traffic analysis
+   - DNS query analysis
+   - Email traffic patterns
+   - File transfer detection
+
+---
+
+## API Endpoints
+
+### Health Check
+```
+GET /api/health
+Response: {
+  "status": "healthy",
+  "database": "connected",
+  "redis": "connected",
+  "workers": "active"
+}
+```
+
+### Analysis Submission
+```
+POST /api/analyze
+Content-Type: multipart/form-data
+Body: {
+  "file": <PCAP_FILE>,
+  "analysis_type": "comprehensive|basic",
+  "priority": "high|normal|low"
+}
+Response: {
+  "job_id": "uuid",
+  "status": "pending",
+  "filename": "capture.pcap",
+  "file_size": 1024000,
+  "created_at": "2024-01-01T12:00:00Z"
+}
+```
+
+### Report Status
+```
+GET /api/report/{job_id}
+Response: {
+  "job_id": "uuid",
+  "status": "pending|processing|completed|failed",
+  "progress": 75,
+  "filename": "capture.pcap",
+  "created_at": "2024-01-01T12:00:00Z",
+  "completed_at": "2024-01-01T12:05:00Z",
+  "results": { ... }  // Only present when completed
+}
+```
+
+### PDF Export
+```
+GET /api/export/pdf/{job_id}
+Response: Binary PDF file
+Content-Type: application/pdf
+Content-Disposition: attachment; filename="report.pdf"
+```
+
+### Reports Listing
+```
+GET /api/reports
+Query Parameters:
+  - limit: int = 20
+  - offset: int = 0
+  - status: str = "all"
+  - search: str = ""
+Response: {
+  "jobs": [...],
+  "stats": {
+    "total_reports": 150,
+    "completed_reports": 142,
+    "processing_reports": 3,
+    "failed_reports": 5,
+    "total_packets_analyzed": 1500000,
+    "total_data_processed": 5368709120
+  }
+}
+```
+
+---
+
+## Report Generation
+
+### Report Structure
+
+1. **Executive Summary**
+   - Key findings overview
+   - Security assessment
+   - Performance summary
+   - Recommendations
+
+2. **Network Overview**
+   - Topology diagram
+   - Communication patterns
+   - Protocol distribution
+   - Traffic statistics
+
+3. **Security Analysis**
+   - Threat detection results
+   - Vulnerability assessment
+   - Anomaly identification
+   - Risk scoring
+
+4. **Performance Metrics**
+   - Latency analysis
+   - Throughput measurements
+   - Quality of service metrics
+   - Bottleneck identification
+
+5. **Technical Details**
+   - Detailed packet statistics
+   - Protocol-specific analysis
+   - Application layer findings
+   - Raw data tables
+
+### PDF Generation Features
+
+- Professional formatting with corporate styling
+- Interactive table of contents
+- High-resolution charts and diagrams
+- Detailed appendices with raw data
+- Customizable branding and headers
 
 ---
 
 ## Development Environment
 
 ### Prerequisites
-- Docker and Docker Compose
-- Node.js 18+ (for local development)
+- Docker Desktop 4.0+
+- Node.js 18+ (for local frontend development)
+- Python 3.11+ (for local backend development)
 - Git
 
-### Setup Instructions
+### Quick Start
 
-1. **Clone the repository**
+1. **Clone and Start**
    ```bash
    git clone <repository-url>
    cd pcap-reporter
-   ```
-
-2. **Start the development environment**
-   ```bash
    docker-compose up -d
    ```
 
-3. **Access the application**
+2. **Access Services**
    - Frontend: http://localhost:3000
    - Backend API: http://localhost:8000
-   - API Documentation: http://localhost:8000/docs
+   - API Docs: http://localhost:8000/docs
+   - MongoDB: localhost:27017
+   - Redis: localhost:6379
 
-### Development Workflow
+3. **Development Commands**
+   ```bash
+   # View logs
+   docker-compose logs -f frontend
+   docker-compose logs -f backend
+   
+   # Restart services
+   docker-compose restart frontend
+   docker-compose restart backend
+   
+   # Access containers
+   docker-compose exec backend bash
+   docker-compose exec frontend bash
+   ```
 
-- Frontend development server runs on port 3000 with hot reload
-- Backend API runs on port 8000 with auto-reload
-- All changes are automatically reflected in the Docker environment
-- MongoDB and Redis are available for backend services
+### Testing
+
+#### Frontend Testing
+```bash
+cd frontend
+npm test                    # Unit tests
+npm run test:e2e           # End-to-end tests
+npm run lint               # Linting
+npm run typecheck          # Type checking
+```
+
+#### Backend Testing
+```bash
+cd backend
+pytest                     # Unit tests
+pytest --cov              # Coverage report
+python -m pytest tests/   # Specific test directory
+```
 
 ---
 
-## Known Issues
+## Production Deployment
 
-### Current Blockers
+### Docker Production Build
 
-1. **Backend API Permission Error**
-   - **Issue**: 500 Internal Server Error when uploading files
-   - **Error**: "Failed to submit analysis job: [Errno 13] Permission denied: '/app'"
-   - **Impact**: Prevents end-to-end file upload functionality
-   - **Status**: Open - requires Docker container permission configuration
+The application includes optimized production Docker configurations:
 
-### Resolved Issues
+1. **Multi-stage builds** for minimal image sizes
+2. **Non-root users** for enhanced security
+3. **Health checks** for container monitoring
+4. **Environment-based configuration**
 
-1. **Text Overlapping on Upload Page**
-   - **Issue**: UI elements overlapping causing poor UX
-   - **Solution**: Restructured hero section and improved layout spacing
-   - **Status**: Resolved in commits 773ac71, 55d6e5a, cd86774, 2ec9d20
+### Environment Variables
+
+```env
+# Backend Configuration
+DATABASE_URL=mongodb://mongodb:27017/pcap_reporter
+REDIS_URL=redis://redis:6379/0
+SECRET_KEY=your-secret-key
+CORS_ORIGINS=["http://localhost:3000"]
+
+# Frontend Configuration
+NEXT_PUBLIC_API_URL=http://localhost:8000
+NEXT_PUBLIC_APP_ENV=production
+
+# Security
+JWT_SECRET=your-jwt-secret
+ALLOWED_HOSTS=["localhost", "your-domain.com"]
+```
+
+### Production Considerations
+
+1. **Security**
+   - Enable HTTPS with SSL certificates
+   - Configure proper CORS settings
+   - Use secure session management
+   - Implement rate limiting
+
+2. **Performance**
+   - Configure Redis caching
+   - Optimize database queries
+   - Enable gzip compression
+   - Use CDN for static assets
+
+3. **Monitoring**
+   - Implement health checks
+   - Set up log aggregation
+   - Monitor resource usage
+   - Configure alerting
 
 ---
 
-*This documentation will be updated as development progresses and new features are implemented.* 
+## User Guide
+
+### Getting Started
+
+1. **Upload a PCAP File**
+   - Navigate to the upload page
+   - Drag and drop your PCAP file or click to browse
+   - Supported formats: .pcap, .pcapng, .cap (max 100MB)
+   - Wait for upload and analysis to complete
+
+2. **View Analysis Results**
+   - Access reports from the dashboard
+   - Filter and search through your reports
+   - Click on any report to view detailed analysis
+   - Export reports as PDF for sharing
+
+3. **Understanding Reports**
+   - **Overview Tab**: Executive summary and key metrics
+   - **Network Tab**: Topology diagrams and communication patterns
+   - **Security Tab**: Threat analysis and vulnerabilities
+   - **Performance Tab**: Latency, throughput, and quality metrics
+   - **Details Tab**: Technical specifications and raw data
+
+### Best Practices
+
+1. **File Preparation**
+   - Ensure PCAP files are not corrupted
+   - Use recent captures for relevant analysis
+   - Consider file size limits for processing time
+
+2. **Analysis Interpretation**
+   - Review executive summary for quick insights
+   - Check security findings for potential threats
+   - Use performance metrics to identify bottlenecks
+   - Refer to technical details for deep analysis
+
+---
+
+## Troubleshooting
+
+### Common Issues
+
+#### Upload Failures
+- **File Too Large**: Maximum file size is 100MB
+- **Invalid Format**: Only .pcap, .pcapng, .cap files supported
+- **Network Issues**: Check internet connection and try again
+
+#### Analysis Errors
+- **Corrupted PCAP**: Ensure file integrity before upload
+- **Processing Timeout**: Large files may take longer to process
+- **Memory Errors**: Very large files may require server resources
+
+#### Display Issues
+- **Missing Charts**: Ensure JavaScript is enabled
+- **Theme Problems**: Clear browser cache and refresh
+- **Mobile Layout**: Use landscape orientation for better experience
+
+### Getting Help
+
+1. **Check Logs**
+   ```bash
+   docker-compose logs backend
+   docker-compose logs frontend
+   ```
+
+2. **Reset Environment**
+   ```bash
+   docker-compose down
+   docker-compose up -d --build
+   ```
+
+3. **Contact Support**
+   - Check GitHub issues for known problems
+   - Create new issue with detailed error information
+   - Include log files and environment details
+
+---
+
+## Conclusion
+
+The MCP-PCAP Reporter provides a comprehensive solution for network packet analysis with modern web technologies. This documentation covers all aspects of the application from development to production deployment.
+
+For additional support or feature requests, please refer to the project repository and issue tracker.
+
+---
+
+*MCP-PCAP Reporter v1.0 - Complete Application Documentation*
+*Last Updated: January 2025*

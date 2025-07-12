@@ -1,58 +1,62 @@
-# 🌐 PCAP Reporter
+# 🌐 MCP-PCAP Reporter v1.0
 
-A comprehensive, production-ready network packet capture analysis tool with real-time processing, web-based interface, and advanced monitoring capabilities.
+A comprehensive network packet capture analysis tool with professional-grade reporting, security scanning, and network visualization capabilities. Built with modern web technologies and ready for production deployment.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Docker](https://img.shields.io/badge/Docker-Ready-blue.svg)](https://www.docker.com/)
-[![Python](https://img.shields.io/badge/Python-3.9+-green.svg)](https://www.python.org/)
-[![Next.js](https://img.shields.io/badge/Next.js-13+-black.svg)](https://nextjs.org/)
+[![Python](https://img.shields.io/badge/Python-3.11+-green.svg)](https://www.python.org/)
+[![Next.js](https://img.shields.io/badge/Next.js-14+-black.svg)](https://nextjs.org/)
+[![Version](https://img.shields.io/badge/Version-1.0-success.svg)](https://github.com/your-org/pcap-reporter/releases)
 
 ## 🚀 Features
 
-### 🔍 **Advanced Analysis**
-- **Multi-format Support**: PCAP, PCAPNG, and CAP files
-- **Real-time Processing**: Live progress updates via WebSocket
-- **Large File Handling**: Streaming processing for files up to 10GB+
-- **Protocol Analysis**: Deep packet inspection with security insights
-- **Performance Metrics**: Bandwidth, latency, and QoS analysis
+### 🔍 **Advanced Analysis Engine**
+- **Multi-format Support**: PCAP, PCAPNG, and CAP files (up to 100MB)
+- **Hybrid Processing**: Combines tshark (high-speed) and Scapy (deep inspection)
+- **Protocol Analysis**: Comprehensive Layer 2-7 protocol breakdown
+- **Security Scanning**: Threat detection and anomaly identification
+- **Performance Metrics**: Latency, throughput, and QoS analysis
+- **Network Topology**: Interactive Mermaid.js diagrams
 
 ### 🌐 **Modern Web Interface**
-- **Responsive Design**: Works on desktop, tablet, and mobile
-- **Dark/Light Mode**: User-customizable interface themes
-- **Interactive Charts**: Zoom, filter, and export visualizations
-- **Real-time Updates**: Live progress tracking and notifications
-- **Batch Processing**: Handle multiple files simultaneously
+- **Responsive Design**: Works seamlessly on desktop, tablet, and mobile
+- **Dark/Light Mode**: Professional themes with smooth transitions
+- **Real-time Updates**: Live progress tracking during analysis
+- **Professional Reports**: Comprehensive PDF export functionality
+- **Intuitive UX**: Drag-and-drop upload with comprehensive feedback
+- **Data Visualization**: Interactive charts and tables with Ant Design
 
-### 🏗️ **Production Ready**
-- **Docker Deployment**: Complete containerized stack
-- **Monitoring Stack**: Prometheus, Grafana, and Loki integration
-- **SSL/TLS Support**: Automated certificate management
-- **Load Balancing**: Nginx reverse proxy with compression
-- **Health Checks**: Comprehensive system monitoring
+### 🏗️ **Production Ready Architecture**
+- **Docker Deployment**: Complete containerized microservices stack
+- **FastAPI Backend**: Async Python API with automatic documentation
+- **Next.js Frontend**: Server-side rendered React with TypeScript
+- **MongoDB Database**: Document-based storage with optimized indexing
+- **Redis Cache**: Task queuing and session management
+- **Celery Workers**: Asynchronous background processing
 
-### ⚡ **Performance Optimized**
-- **Streaming Processing**: Memory-efficient for large files
-- **Parallel Workers**: Configurable concurrent processing
-- **Database Optimization**: Indexed queries and aggregations
-- **Caching Layer**: Redis for improved response times
-- **Resource Monitoring**: Real-time system metrics
+### ⚡ **Enterprise Features**
+- **Error Handling**: Comprehensive error boundaries and recovery
+- **Health Monitoring**: Built-in health checks and status endpoints
+- **Professional UI**: Consistent design system and accessibility
+- **Scalable Processing**: Configurable worker processes
+- **MCP Integration**: Model Context Protocol server support
 
 ## 📋 Quick Start
 
 ### Prerequisites
-- Docker 20.10+ and Docker Compose 2.0+
-- 4GB RAM (8GB recommended)
-- 10GB free disk space
+- Docker Desktop 4.0+ and Docker Compose 2.0+
+- 4GB RAM (8GB recommended for large files)
+- 5GB free disk space minimum
 
 ### 1. Clone and Start
 ```bash
 git clone https://github.com/your-org/pcap-reporter.git
 cd pcap-reporter
 
-# Start development environment
+# Start all services
 docker-compose up -d
 
-# Check status
+# Verify services are running
 docker-compose ps
 ```
 
@@ -63,10 +67,10 @@ docker-compose ps
 
 ### 3. Upload and Analyze
 1. Open http://localhost:3000 in your browser
-2. Drag and drop a PCAP file or click "Choose File"
-3. Configure analysis options (optional)
-4. Monitor real-time progress
-5. View comprehensive analysis results
+2. Navigate to the Upload page
+3. Drag and drop a PCAP file (max 100MB)
+4. Wait for automatic analysis completion
+5. View detailed reports with PDF export option
 
 ## 🏗️ Architecture
 
@@ -74,52 +78,60 @@ PCAP Reporter uses a modern microservices architecture:
 
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Frontend      │    │    Backend      │    │   Workers       │
-│   (Next.js)     │◄──►│   (FastAPI)     │◄──►│   (Celery)      │
-│   Port 3000     │    │   Port 8000     │    │   Background    │
+│   Browser       │    │     Nginx       │    │   Frontend      │
+│                 │◄──►│ (Reverse Proxy) │◄──►│   (Next.js)     │
+│                 │    │   Port 80/443   │    │   Port 3000     │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
-         │                       │                       │
-         ▼                       ▼                       ▼
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│     Nginx       │    │    MongoDB      │    │     Redis       │
-│  (Reverse Proxy)│    │   (Database)    │    │   (Cache/Queue) │
-│   Port 80/443   │    │   Port 27017    │    │   Port 6379     │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
+                                │                       │
+                                ▼                       ▼
+                       ┌─────────────────┐    ┌─────────────────┐
+                       │    Backend      │    │   Workers       │
+                       │   (FastAPI)     │◄──►│   (Celery)      │
+                       │   Port 8000     │    │   Background    │
+                       └─────────────────┘    └─────────────────┘
+                                │                       │
+                                ▼                       ▼
+                       ┌─────────────────┐    ┌─────────────────┐
+                       │    MongoDB      │    │     Redis       │
+                       │   (Database)    │    │   (Cache/Queue) │
+                       │   Port 27017    │    │   Port 6379     │
+                       └─────────────────┘    └─────────────────┘
 ```
 
 ### Core Components
 
-- **Frontend**: React/Next.js with TypeScript and Tailwind CSS
-- **Backend**: Python FastAPI with async processing
-- **Database**: MongoDB with optimized indexing
-- **Queue**: Redis with Celery for background jobs
-- **Proxy**: Nginx with SSL termination and load balancing
-- **Monitoring**: Prometheus, Grafana, and Loki stack
+- **Frontend**: Next.js 14 with TypeScript, Ant Design, and Tailwind CSS
+- **Backend**: Python 3.11 FastAPI with async processing and auto-documentation
+- **Analysis Engine**: Hybrid tshark/Scapy processing with Celery workers
+- **Database**: MongoDB with optimized indexing and aggregation pipelines
+- **Cache/Queue**: Redis for task management and session storage
+- **Reverse Proxy**: Nginx with compression and static file serving
 
 ## 📊 Analysis Capabilities
 
-### Protocol Analysis
-- **Layer 2-7 Analysis**: Ethernet, IP, TCP, UDP, HTTP, HTTPS, DNS, and more
-- **Protocol Distribution**: Visual breakdown of traffic composition
-- **Custom Protocols**: Extensible protocol detection framework
+### Network Statistics
+- **Protocol Distribution**: Comprehensive breakdown of Layer 2-7 protocols
+- **Top Conversations**: Most active communication pairs
+- **Traffic Patterns**: Temporal analysis of network usage
+- **Packet Analysis**: Detailed packet-level statistics
 
-### Traffic Insights
-- **Bandwidth Utilization**: Time-series analysis of network usage
-- **Top Talkers**: Most active hosts and conversations
-- **Geographic Analysis**: IP geolocation and traffic flows
-- **Peak Detection**: Automatic identification of traffic spikes
+### Security Analysis  
+- **Threat Detection**: Identification of suspicious traffic patterns
+- **Port Scanning**: Detection of reconnaissance activities
+- **Protocol Anomalies**: Unusual protocol behavior identification
+- **Security Scoring**: Risk assessment with severity ratings
 
-### Security Features
-- **Anomaly Detection**: Statistical analysis for unusual patterns
-- **Threat Indicators**: Port scans, suspicious connections
-- **Behavioral Analysis**: Communication pattern assessment
-- **Compliance Reporting**: Security audit trail generation
+### Performance Analysis
+- **Latency Measurements**: Response time and delay analysis
+- **Throughput Analysis**: Bandwidth utilization metrics
+- **Connection Quality**: TCP retransmissions and errors
+- **Application Performance**: Layer 7 application analysis
 
-### Performance Metrics
-- **Response Times**: Application and network latency analysis
-- **Throughput Analysis**: Bandwidth efficiency measurements
-- **Quality of Service**: Packet loss and jitter detection
-- **Capacity Planning**: Historical trend analysis
+### Visualization & Reporting
+- **Interactive Charts**: Protocol distribution and traffic timelines
+- **Network Diagrams**: Mermaid.js topology visualization
+- **PDF Reports**: Professional formatted analysis reports
+- **Data Export**: Detailed tables and raw statistics
 
 ## 🛠️ Installation Options
 
@@ -345,19 +357,19 @@ We welcome contributions! Please see our [Contributing Guide](docs/development/c
 
 ## 🗺️ Roadmap
 
-### Version 1.1 (Q1 2024)
+### Version 1.1 (Q1 2025)
 - [ ] User authentication and authorization
 - [ ] Multi-tenant support
 - [ ] Advanced filtering and search
 - [ ] PDF report generation
 
-### Version 1.2 (Q2 2024)
+### Version 1.2 (Q2 2025)
 - [ ] Real-time packet capture integration
 - [ ] Custom protocol definitions
 - [ ] Machine learning anomaly detection
 - [ ] LDAP/SSO integration
 
-### Version 2.0 (Q3 2024)
+### Version 2.0 (Q3 2025)
 - [ ] Distributed processing cluster
 - [ ] Advanced visualization options
 - [ ] Plugin architecture

@@ -45,6 +45,13 @@ import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
 import { ApiService, handleApiError, formatFileSize, formatDuration } from '@/lib/api'
 import type { AnalysisJob, ReportsStats } from '@/lib/api'
+import { 
+  AppHeader, 
+  LoadingOverlay, 
+  LoadingSkeleton, 
+  ErrorBoundary, 
+  useErrorHandler 
+} from '@/components'
 import { ThemeToggle } from '../components/ThemeToggle'
 
 dayjs.extend(relativeTime)
@@ -132,7 +139,11 @@ export default function ReportsPage() {
       onOk: async () => {
         try {
           await ApiService.deleteAnalysis(jobId)
-          message.success('Report deleted successfully')
+          message.success({
+            content: 'Report deleted successfully',
+            duration: 3,
+            style: { marginTop: '20vh' }
+          })
           fetchReports(false)
         } catch (error: any) {
           console.error('Error deleting report:', error)
@@ -155,7 +166,11 @@ export default function ReportsPage() {
       window.URL.revokeObjectURL(url)
       document.body.removeChild(a)
       
-      message.success('Report downloaded successfully')
+      message.success({
+        content: 'Report downloaded successfully',
+        duration: 3,
+        style: { marginTop: '20vh' }
+      })
     } catch (error: any) {
       console.error('Error downloading report:', error)
       message.error(handleApiError(error))
@@ -316,36 +331,28 @@ export default function ReportsPage() {
   return (
     <Layout className="min-h-screen">
       {/* Header */}
-      <Header className="bg-slate-800 shadow-lg">
-        <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 flex items-center justify-between gap-2 sm:gap-4">
-          <Link href="/" className="flex items-center space-x-2 sm:space-x-3 min-w-0 flex-shrink-0">
-            <GlobalOutlined className="text-white text-lg sm:text-xl md:text-2xl" />
-            <Title level={3} className="text-white mb-0 truncate text-sm sm:text-base md:text-lg lg:text-xl">
-              PCAP Reporter
-            </Title>
+      <AppHeader 
+        title="Analysis Reports"
+        actions={
+          <Link href="/upload">
+            <Button 
+              type="primary" 
+              icon={<CloudUploadOutlined />} 
+              className="hidden md:inline-flex"
+              size="middle"
+            >
+              Upload PCAP
+            </Button>
+            <Button 
+              type="primary" 
+              icon={<CloudUploadOutlined />} 
+              className="md:hidden" 
+              size="small"
+              title="Upload PCAP"
+            />
           </Link>
-          <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
-            <Link href="/upload">
-              <Button 
-                type="primary" 
-                icon={<CloudUploadOutlined />} 
-                className="hidden md:inline-flex"
-                size="middle"
-              >
-                Upload PCAP
-              </Button>
-              <Button 
-                type="primary" 
-                icon={<CloudUploadOutlined />} 
-                className="md:hidden" 
-                size="small"
-                title="Upload PCAP"
-              />
-            </Link>
-            <ThemeToggle />
-          </div>
-        </div>
-      </Header>
+        }
+      />
 
       {/* Main Content */}
       <Content className="bg-gray-50 p-6">
@@ -469,6 +476,29 @@ export default function ReportsPage() {
               dataSource={filteredReports}
               rowKey="job_id"
               loading={loading}
+              locale={{
+                emptyText: (
+                  <div className="py-8">
+                    <FileTextOutlined style={{ fontSize: '48px', color: '#d9d9d9' }} />
+                    <div className="mt-4">
+                      <Title level={4} type="secondary">No reports found</Title>
+                      <Paragraph type="secondary">
+                        {searchText || statusFilter !== 'all' || dateRange 
+                          ? 'Try adjusting your filters or search terms.'
+                          : 'Upload your first PCAP file to generate analysis reports.'
+                        }
+                      </Paragraph>
+                      {!searchText && statusFilter === 'all' && !dateRange && (
+                        <Link href="/upload">
+                          <Button type="primary" icon={<CloudUploadOutlined />}>
+                            Upload PCAP File
+                          </Button>
+                        </Link>
+                      )}
+                    </div>
+                  </div>
+                )
+              }}
               pagination={{
                 showSizeChanger: true,
                 showQuickJumper: true,
