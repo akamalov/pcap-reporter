@@ -166,6 +166,21 @@ export interface AnalysisResult {
       total_bytes: number
     }>
   }
+  analysis_results?: {
+    network_diagrams?: {
+      network_topology?: string
+      protocol_flow?: string
+      security_incidents?: string
+      performance_analysis?: string
+      _metadata?: {
+        generated_at?: string
+        diagram_count?: number
+        generator_version?: string
+        error?: string
+      }
+      error?: string
+    }
+  }
 }
 
 export interface UploadResponse {
@@ -277,7 +292,7 @@ export class ApiService {
   }
 
   static async downloadReport(jobId: string): Promise<Blob> {
-    const response = await apiClient.get(`/api/v1/reports/${jobId}/download`, {
+    const response = await apiClient.get(`/api/v1/export/pdf/${jobId}`, {
       responseType: 'blob',
     })
     return response.data

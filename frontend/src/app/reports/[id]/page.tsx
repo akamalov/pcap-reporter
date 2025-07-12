@@ -61,6 +61,7 @@ import relativeTime from 'dayjs/plugin/relativeTime'
 import { ApiService, handleApiError, formatFileSize, formatDuration, getSeverityColor } from '@/lib/api'
 import type { AnalysisResult } from '@/lib/api'
 import { ThemeToggle } from '../../components/ThemeToggle'
+import NetworkDiagramViewer from '@/components/NetworkDiagramViewer'
 
 dayjs.extend(relativeTime)
 
@@ -658,6 +659,15 @@ export default function ReportViewPage() {
                     </Col>
                   )}
                 </Row>
+              </TabPane>
+
+              {/* Network Diagrams Tab */}
+              <TabPane tab="Network Diagrams" key="diagrams">
+                <NetworkDiagramViewer
+                  diagramData={report.analysis_results?.network_diagrams}
+                  loading={report.status === 'processing'}
+                  height={600}
+                />
               </TabPane>
 
               {/* Performance Tab */}

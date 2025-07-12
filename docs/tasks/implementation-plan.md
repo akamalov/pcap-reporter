@@ -149,17 +149,17 @@ This document outlines the phased implementation plan for the MCP PCAP Reporter 
 
 **Goal:** Implement the advanced visualization components for the report.
 
-- [ ] **Step 5.1: Generate Diagram Data**
-    - [ ] In the backend Celery task, add logic to generate a text-based definition for the Logical Communication Diagram (e.g., in Mermaid.js syntax).
-    - [ ] Add this definition to the JSON result stored in MongoDB.
-- [ ] **Step 5.2: Render the Diagram**
-    - [ ] In the frontend report page, add a component that takes the diagram definition.
-    - [ ] Use `Mermaid.js` or a similar library to render the diagram visually.
-- [ ] **Step 5.3: Implement PDF Export**
-    - [ ] Add a new backend endpoint `/api/export/pdf` that takes a `job_id`.
-    - [ ] (TDD) Write tests for the PDF export functionality.
-    - [ ] Implement the logic to fetch the report data, render it into an HTML template, and convert it to a professional-looking PDF using a library like WeasyPrint.
-    - [ ] Add a "Download PDF" button to the frontend report page.
+- [x] **Step 5.1: Generate Diagram Data**
+    - [x] In the backend Celery task, add logic to generate a text-based definition for the Logical Communication Diagram (e.g., in Mermaid.js syntax).
+    - [x] Add this definition to the JSON result stored in MongoDB.
+- [x] **Step 5.2: Render the Diagram**
+    - [x] In the frontend report page, add a component that takes the diagram definition.
+    - [x] Use `Mermaid.js` or a similar library to render the diagram visually.
+- [x] **Step 5.3: Implement PDF Export**
+    - [x] Add a new backend endpoint `/api/export/pdf` that takes a `job_id`.
+    - [x] (TDD) Write tests for the PDF export functionality.
+    - [x] Implement the logic to fetch the report data, render it into an HTML template, and convert it to a professional-looking PDF using a library like WeasyPrint.
+    - [x] Add a "Download PDF" button to the frontend report page.
 - [ ] **Phase 5 Documentation:**
     - [ ] Create/update `docs/docs/application-documentation.md` with a "Report Generation" section.
 
