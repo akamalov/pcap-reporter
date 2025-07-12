@@ -17,6 +17,7 @@ from models.analysis_job import AnalysisJob, JobStatus
 from services.pcap_analysis_service import PcapAnalysisService
 from services.streaming_pcap_service import StreamingPcapService, StreamingConfig
 from services.websocket_service import websocket_service
+from services.network_diagram_generator import NetworkDiagramGenerator
 
 logger = logging.getLogger(__name__)
 
@@ -147,6 +148,81 @@ def analyze_pcap_file(self, report_id: str, file_path: str) -> Dict[str, Any]:
                     options=getattr(analysis_job, 'options', {})
                 )
             
+            await progress_callback(85, "Generating network diagrams...")
+            
+            # Generate network diagrams from analysis results
+            try:
+                diagram_generator = NetworkDiagramGenerator()
+                
+                # Create diagram input from analysis results
+                diagram_input = {
+                    'conversations': [],
+                    'top_talkers': [],
+                    'security_analysis': {'security_alerts': []},
+                    'performance_analysis': {'performance_issues': []}
+                }
+                
+                # Extract conversation data if available
+                if hasattr(analysis_results, 'top_conversations') and analysis_results.top_conversations:
+                    diagram_input['conversations'] = [
+                        {
+                            'src_ip': conv.src_ip,
+                            'dst_ip': conv.dst_ip,
+                            'src_port': conv.src_port,
+                            'dst_port': conv.dst_port,
+                            'protocol': conv.protocol,
+                            'packet_count': conv.packets_sent + conv.packets_received,
+                            'byte_count': conv.bytes_sent + conv.bytes_received
+                        }
+                        for conv in analysis_results.top_conversations[:50]  # Limit for performance
+                    ]
+                
+                # Extract security issues
+                if hasattr(analysis_results, 'issues') and analysis_results.issues:
+                    security_alerts = []
+                    for issue in analysis_results.issues:
+                        if hasattr(issue, 'type') and 'security' in issue.type.value.lower():
+                            security_alerts.append({
+                                'type': issue.type.value,
+                                'description': issue.description,
+                                'severity': issue.severity.value.upper(),
+                                'affected_hosts': getattr(issue, 'affected_hosts', [])
+                            })
+                    diagram_input['security_analysis']['security_alerts'] = security_alerts
+                
+                # Extract performance issues
+                performance_issues = []
+                if hasattr(analysis_results, 'issues') and analysis_results.issues:
+                    for issue in analysis_results.issues:
+                        if hasattr(issue, 'type') and 'performance' in issue.type.value.lower():
+                            performance_issues.append({
+                                'type': issue.type.value,
+                                'description': issue.description,
+                                'severity': issue.severity.value.upper()
+                            })
+                
+                # Add bandwidth and connection rate from performance metrics
+                if hasattr(analysis_results, 'performance_metrics'):
+                    perf_metrics = analysis_results.performance_metrics
+                    diagram_input['performance_analysis'].update({
+                        'bandwidth_usage': int(analysis_results.traffic_stats.bytes_per_second * analysis_results.traffic_stats.duration) if hasattr(analysis_results, 'traffic_stats') else 0,
+                        'connection_rate': len(diagram_input['conversations']),
+                        'latency_indicators': int(perf_metrics.avg_latency * 1000) if perf_metrics.avg_latency else 0,
+                        'performance_issues': performance_issues
+                    })
+                
+                # Generate comprehensive diagram set
+                diagrams = diagram_generator.generate_comprehensive_diagram_set(diagram_input)
+                
+                logger.info(f"Generated {len([k for k in diagrams.keys() if not k.startswith('_')])} network diagrams")
+                
+            except Exception as diagram_error:
+                logger.warning(f"Failed to generate diagrams: {diagram_error}")
+                diagrams = {
+                    'error': f"Diagram generation failed: {str(diagram_error)}",
+                    '_metadata': {'error': str(diagram_error)}
+                }
+            
             await progress_callback(90, "Finalizing results...")
             
             # Convert AnalysisResults to the format expected by the Report model
@@ -189,7 +265,8 @@ def analyze_pcap_file(self, report_id: str, file_path: str) -> Dict[str, Any]:
                 "start_time": analysis_results.start_time,
                 "end_time": analysis_results.end_time,
                 "processing_time": analysis_results.processing_time,
-                "analysis_options": analysis_results.analysis_options
+                "analysis_options": analysis_results.analysis_options,
+                "network_diagrams": diagrams  # Add generated diagrams
             }
             
             # Update report with results

@@ -76,23 +76,23 @@ This document outlines the phased implementation plan for the MCP PCAP Reporter 
 
 ---
 
-## Phase 2: PCAP Analysis Engine Implementation
+## Phase 2: PCAP Analysis Engine Implementation ✅
 
 **Goal:** Implement the core PCAP analysis logic within a Celery worker, driven by tests using sample PCAP files.
 
-- [ ] **Step 2.1: Setup Analysis Test Fixtures**
-    - [ ] Create a `tests/fixtures` directory for sample `.pcap` files with known characteristics (e.g., one with clear DNS issues, one with TCP retransmissions).
-- [ ] **Step 2.2: Implement High-Speed Triage (`tshark`)**
-    - [ ] (TDD) Write tests that run `pyshark` on a fixture PCAP and assert that basic stats ("Top N" talkers, conversations, protocols) are correctly extracted.
-    - [ ] Implement the `tshark`-based analysis logic in a Celery task.
-- [ ] **Step 2.3: Implement Deep Packet Inspection (`Scapy`)**
-    - [ ] (TDD) Write tests that run `Scapy` on a targeted stream from a fixture PCAP and assert that specific issues (e.g., high handshake latency, TCP Zero Window) are detected.
-    - [ ] Implement the `Scapy`-based analysis logic in the Celery task.
-- [ ] **Step 2.4: Data Persistence**
-    - [ ] (TDD) Write tests to ensure the analysis result (a structured JSON object) is correctly saved to MongoDB upon task completion.
-    - [ ] Implement the logic to connect to MongoDB from the Celery worker and save the results.
-- [ ] **Phase 2 Documentation:**
-    - [ ] Create/update `docs/docs/application-documentation.md` with an "Analysis Engine" section, describing the hybrid approach and the structure of the resulting JSON data.
+- [x] **Step 2.1: Setup Analysis Test Fixtures**
+    - [x] Create a `tests/fixtures` directory for sample `.pcap` files with known characteristics (e.g., one with clear DNS issues, one with TCP retransmissions).
+- [x] **Step 2.2: Implement High-Speed Triage (`tshark`)**
+    - [x] (TDD) Write tests that run `pyshark` on a fixture PCAP and assert that basic stats ("Top N" talkers, conversations, protocols) are correctly extracted.
+    - [x] Implement the `tshark`-based analysis logic in a Celery task.
+- [x] **Step 2.3: Implement Deep Packet Inspection (`Scapy`)**
+    - [x] (TDD) Write tests that run `Scapy` on a targeted stream from a fixture PCAP and assert that specific issues (e.g., high handshake latency, TCP Zero Window) are detected.
+    - [x] Implement the `Scapy`-based analysis logic in the Celery task.
+- [x] **Step 2.4: Data Persistence**
+    - [x] (TDD) Write tests to ensure the analysis result (a structured JSON object) is correctly saved to MongoDB upon task completion.
+    - [x] Implement the logic to connect to MongoDB from the Celery worker and save the results.
+- [x] **Phase 2 Documentation:**
+    - [x] Create/update `docs/docs/application-documentation.md` with an "Analysis Engine" section, describing the hybrid approach and the structure of the resulting JSON data.
 
 ---
 
