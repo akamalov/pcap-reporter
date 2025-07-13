@@ -4,6 +4,7 @@ Simplified pytest configuration for basic testing.
 import asyncio
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
+from core.config import Settings
 
 
 @pytest.fixture(scope="session")
@@ -12,6 +13,20 @@ def event_loop():
     loop = asyncio.get_event_loop_policy().new_event_loop()
     yield loop
     loop.close()
+
+
+@pytest.fixture(scope="session", autouse=True)
+def mock_settings():
+    """
+    Mocks the get_settings function to return a test-specific Settings instance.
+    This autouse fixture ensures that all application code gets the test settings.
+    """
+    test_settings = Settings(
+        ALLOWED_HOSTS=["localhost", "127.0.0.1", "testserver"],
+        BACKEND_CORS_ORIGINS=["http://localhost:3000", "http://localhost:8000"],
+    )
+    with patch('core.config.get_settings', return_value=test_settings) as _mock_get_settings:
+        yield _mock_get_settings
 
 
 @pytest.fixture(scope="function")

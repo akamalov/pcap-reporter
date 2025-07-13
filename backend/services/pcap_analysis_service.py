@@ -25,6 +25,8 @@ from models.analysis_results import (
 )
 from services.protocol_analyzers import ProtocolAnalysisEngine
 from services.packet_processing_pipeline import PacketProcessingPipeline
+from services.advanced_protocol_analyzer import advanced_protocol_analyzer
+from services.ml_anomaly_detector import ml_anomaly_detector
 
 logger = logging.getLogger(__name__)
 
@@ -78,6 +80,12 @@ class PcapAnalysisService:
         # Perform advanced protocol analysis
         advanced_protocol_analysis = await self._perform_advanced_protocol_analysis(file_path)
         
+        # Perform deep protocol inspection
+        deep_protocol_analysis = await advanced_protocol_analyzer.analyze_protocols(file_path)
+        
+        # Perform ML-based anomaly detection
+        ml_anomaly_analysis = await ml_anomaly_detector.analyze_pcap_for_anomalies(file_path)
+        
         # Detect performance issues
         issues = await self._detect_performance_issues(file_path)
         
@@ -125,6 +133,59 @@ class PcapAnalysisService:
                 confidence=issue.get('confidence', 1.0)
             ))
         
+        # Add security issues from deep protocol analysis
+        for security_issue in deep_protocol_analysis.get('security_issues', []):
+            network_issues.append(NetworkIssue(
+                type=IssueType.SECURITY_ANOMALIES,
+                severity=SeverityLevel(security_issue.get('severity', 'medium').lower()),
+                description=security_issue.get('description', 'Security anomaly detected'),
+                recommendation='Review security implications and implement appropriate controls',
+                confidence=0.8
+            ))
+        
+        # Add data exfiltration indicators as high-severity issues
+        for exfil_indicator in deep_protocol_analysis.get('data_exfiltration_indicators', []):
+            network_issues.append(NetworkIssue(
+                type=IssueType.SECURITY_ANOMALIES,
+                severity=SeverityLevel.HIGH,
+                description=f"Data exfiltration indicator: {exfil_indicator.get('description', 'Unknown')}",
+                recommendation='Investigate potential data exfiltration and secure sensitive data',
+                confidence=0.85
+            ))
+        
+        # Add malware indicators as critical issues
+        for malware_indicator in deep_protocol_analysis.get('malware_indicators', []):
+            network_issues.append(NetworkIssue(
+                type=IssueType.SECURITY_ANOMALIES,
+                severity=SeverityLevel.CRITICAL,
+                description=f"Malware indicator detected: {malware_indicator.get('type', 'Unknown')}",
+                recommendation='Immediate malware investigation and containment required',
+                confidence=0.9
+            ))
+        
+        # Add ML-detected anomalies as issues
+        for ml_anomaly in ml_anomaly_analysis.get('anomalies', []):
+            severity_map = {
+                'low': SeverityLevel.LOW,
+                'medium': SeverityLevel.MEDIUM,
+                'high': SeverityLevel.HIGH
+            }
+            
+            network_issues.append(NetworkIssue(
+                type=IssueType.SECURITY_ANOMALIES,
+                severity=severity_map.get(ml_anomaly.get('severity', 'medium'), SeverityLevel.MEDIUM),
+                description=f"ML Anomaly: {ml_anomaly.get('description', 'Unknown anomaly')}",
+                recommendation=f"Investigate {ml_anomaly.get('anomaly_type', 'unknown')} activity pattern",
+                confidence=ml_anomaly.get('confidence', 0.7)
+            ))
+        
+        # Merge protocol analysis results
+        merged_protocol_analysis = {
+            'advanced_analysis': advanced_protocol_analysis,
+            'deep_inspection': deep_protocol_analysis,
+            'ml_anomaly_detection': ml_anomaly_analysis
+        }
+        
         # Create analysis results
         results = AnalysisResults(
             file_path=file_path,
@@ -133,7 +194,7 @@ class PcapAnalysisService:
             performance_metrics=performance_metrics,
             protocol_stats=protocol_stats,
             issues=network_issues,
-            protocol_analysis=advanced_protocol_analysis,
+            protocol_analysis=merged_protocol_analysis,
             start_time=basic_stats['start_time'],
             end_time=basic_stats['end_time'],
             analysis_options=options or {},
@@ -218,28 +279,112 @@ class PcapAnalysisService:
         - Start/end timestamps
         """
         try:
-            # Build tshark command for basic statistics
-            cmd = [
+            # Get basic packet count and IO statistics
+            io_stats_cmd = [
                 'tshark',
                 '-r', file_path,
                 '-q',  # Quiet mode
-                '-z', 'io,stat,0',  # IO statistics
-                '-T', 'fields',
-                '-e', 'frame.number',
-                '-e', 'frame.len',
-                '-e', 'frame.time_relative',
-                '-e', 'frame.time',
-                '-c', '1'  # Just get first packet for timing info
+                '-z', 'io,stat,0'  # IO statistics for entire capture
             ]
             
-            # For now, return mock data that matches expected format
-            # TODO: Replace with actual tshark execution
+            process = await asyncio.create_subprocess_exec(
+                *io_stats_cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+            
+            stdout, stderr = await process.communicate()
+            
+            if process.returncode != 0:
+                raise RuntimeError(f"tshark failed: {stderr.decode()}")
+            
+            # Parse IO statistics output
+            output = stdout.decode()
+            total_packets = 0
+            total_bytes = 0
+            duration = 0.0
+            
+            # Parse the IO statistics output
+            for line in output.split('\n'):
+                if 'Packets:' in line and 'Bytes:' in line:
+                    # Extract packet and byte counts from line like: "| Duration: 60.0 | Packets: 1000 | Bytes: 1024000 |"
+                    parts = line.split('|')
+                    for part in parts:
+                        part = part.strip()
+                        if 'Packets:' in part:
+                            total_packets = int(part.split(':')[1].strip())
+                        elif 'Bytes:' in part:
+                            total_bytes = int(part.split(':')[1].strip())
+                        elif 'Duration:' in part:
+                            duration = float(part.split(':')[1].strip())
+            
+            # Get first and last packet timestamps
+            timestamps_cmd = [
+                'tshark',
+                '-r', file_path,
+                '-T', 'fields',
+                '-e', 'frame.time',
+                '-E', 'separator=|'
+            ]
+            
+            process = await asyncio.create_subprocess_exec(
+                *timestamps_cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+            
+            stdout, stderr = await process.communicate()
+            
+            if process.returncode == 0:
+                timestamps = stdout.decode().strip().split('\n')
+                if timestamps and timestamps[0]:
+                    start_time = timestamps[0].strip()
+                    end_time = timestamps[-1].strip() if len(timestamps) > 1 else start_time
+                else:
+                    # Fallback timestamps
+                    start_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')
+                    end_time = start_time
+            else:
+                # Fallback timestamps
+                start_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')
+                end_time = start_time
+            
+            # If we couldn't parse from IO stats, try alternative method
+            if total_packets == 0:
+                # Count packets directly
+                count_cmd = [
+                    'tshark',
+                    '-r', file_path,
+                    '-T', 'fields',
+                    '-e', 'frame.number',
+                    '-e', 'frame.len'
+                ]
+                
+                process = await asyncio.create_subprocess_exec(
+                    *count_cmd,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE
+                )
+                
+                stdout, stderr = await process.communicate()
+                
+                if process.returncode == 0:
+                    lines = stdout.decode().strip().split('\n')
+                    total_packets = len([line for line in lines if line.strip()])
+                    
+                    # Calculate total bytes
+                    for line in lines:
+                        if line.strip():
+                            parts = line.strip().split('\t')
+                            if len(parts) >= 2 and parts[1].isdigit():
+                                total_bytes += int(parts[1])
+            
             return {
-                'total_packets': 1000,
-                'total_bytes': 1024000,
-                'duration': 60.0,
-                'start_time': '2025-01-15 10:00:00.000000',
-                'end_time': '2025-01-15 10:01:00.000000'
+                'total_packets': total_packets,
+                'total_bytes': total_bytes,
+                'duration': duration,
+                'start_time': start_time,
+                'end_time': end_time
             }
             
         except Exception as e:
@@ -283,18 +428,83 @@ class PcapAnalysisService:
     
     async def _get_protocol_counts(self, file_path: str) -> Dict[str, str]:
         """Get protocol counts using tshark."""
-        # Mock implementation for now
-        # TODO: Replace with actual tshark protocol analysis
-        return {
-            'tcp': '800',
-            'udp': '150',
-            'icmp': '50',
-            'http': '25',
-            'https': '30',
-            'dns': '75',
-            'dhcp': '5',
-            'arp': '10'
-        }
+        try:
+            # Get protocol hierarchy statistics
+            cmd = [
+                'tshark',
+                '-r', file_path,
+                '-q',
+                '-z', 'io,phs'  # Protocol hierarchy statistics
+            ]
+            
+            process = await asyncio.create_subprocess_exec(
+                *cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+            
+            stdout, stderr = await process.communicate()
+            
+            if process.returncode != 0:
+                self.logger.warning(f"tshark protocol analysis failed: {stderr.decode()}")
+                return {}
+            
+            # Parse protocol hierarchy output
+            output = stdout.decode()
+            protocol_counts = {}
+            
+            for line in output.split('\n'):
+                line = line.strip()
+                if not line or line.startswith('=') or 'Protocol Hierarchy Statistics' in line:
+                    continue
+                
+                # Parse lines like: "tcp                      frames:800 bytes:1024000"
+                if 'frames:' in line:
+                    parts = line.split()
+                    if len(parts) >= 2:
+                        protocol = parts[0].lower()
+                        frames_part = [p for p in parts if 'frames:' in p]
+                        if frames_part:
+                            frame_count = frames_part[0].split(':')[1]
+                            protocol_counts[protocol] = frame_count
+            
+            # Also get specific protocol counts for common protocols
+            specific_protocols = {
+                'http': 'http',
+                'https': 'tls',
+                'dns': 'dns',
+                'dhcp': 'dhcp',
+                'arp': 'arp'
+            }
+            
+            for proto_name, tshark_filter in specific_protocols.items():
+                cmd = [
+                    'tshark',
+                    '-r', file_path,
+                    '-Y', tshark_filter,  # Display filter
+                    '-T', 'fields',
+                    '-e', 'frame.number'
+                ]
+                
+                process = await asyncio.create_subprocess_exec(
+                    *cmd,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE
+                )
+                
+                stdout, stderr = await process.communicate()
+                
+                if process.returncode == 0:
+                    lines = stdout.decode().strip().split('\n')
+                    count = len([line for line in lines if line.strip()])
+                    if count > 0:
+                        protocol_counts[proto_name] = str(count)
+            
+            return protocol_counts
+            
+        except Exception as e:
+            self.logger.error(f"Failed to get protocol counts: {e}")
+            return {}
     
     async def _detect_performance_issues(self, file_path: str) -> List[Dict[str, Any]]:
         """
@@ -350,29 +560,234 @@ class PcapAnalysisService:
     
     async def _analyze_tcp_performance(self, file_path: str) -> Dict[str, float]:
         """Analyze TCP performance metrics."""
-        # Mock implementation for now
-        # TODO: Replace with actual TCP analysis using tshark/pyshark
-        return {
-            'avg_handshake_time': 0.05,
-            'max_handshake_time': 0.25,
-            'retransmissions': 15,
-            'total_packets': 1000,
-            'retransmission_rate': 0.015,
-            'failed_connections': 2
-        }
+        try:
+            metrics = {
+                'avg_handshake_time': 0.0,
+                'max_handshake_time': 0.0,
+                'retransmissions': 0,
+                'total_packets': 0,
+                'retransmission_rate': 0.0,
+                'failed_connections': 0
+            }
+            
+            # Get TCP retransmissions
+            retrans_cmd = [
+                'tshark',
+                '-r', file_path,
+                '-Y', 'tcp.analysis.retransmission',
+                '-T', 'fields',
+                '-e', 'frame.number'
+            ]
+            
+            process = await asyncio.create_subprocess_exec(
+                *retrans_cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+            
+            stdout, stderr = await process.communicate()
+            
+            if process.returncode == 0:
+                retrans_lines = stdout.decode().strip().split('\n')
+                metrics['retransmissions'] = len([line for line in retrans_lines if line.strip()])
+            
+            # Get total TCP packets
+            tcp_cmd = [
+                'tshark',
+                '-r', file_path,
+                '-Y', 'tcp',
+                '-T', 'fields',
+                '-e', 'frame.number'
+            ]
+            
+            process = await asyncio.create_subprocess_exec(
+                *tcp_cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+            
+            stdout, stderr = await process.communicate()
+            
+            if process.returncode == 0:
+                tcp_lines = stdout.decode().strip().split('\n')
+                metrics['total_packets'] = len([line for line in tcp_lines if line.strip()])
+            
+            # Calculate retransmission rate
+            if metrics['total_packets'] > 0:
+                metrics['retransmission_rate'] = metrics['retransmissions'] / metrics['total_packets']
+            
+            # Analyze connection handshakes for timing (simplified)
+            syn_cmd = [
+                'tshark',
+                '-r', file_path,
+                '-Y', 'tcp.flags.syn==1 and tcp.flags.ack==0',
+                '-T', 'fields',
+                '-e', 'frame.time_relative'
+            ]
+            
+            process = await asyncio.create_subprocess_exec(
+                *syn_cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+            
+            stdout, stderr = await process.communicate()
+            
+            if process.returncode == 0:
+                syn_times = stdout.decode().strip().split('\n')
+                syn_times = [float(t) for t in syn_times if t.strip() and t.replace('.', '').isdigit()]
+                
+                if len(syn_times) > 1:
+                    # Estimate handshake times (simplified calculation)
+                    handshake_times = []
+                    for i in range(1, min(len(syn_times), 10)):  # Sample first 10
+                        if syn_times[i] > syn_times[i-1]:
+                            handshake_times.append(syn_times[i] - syn_times[i-1])
+                    
+                    if handshake_times:
+                        metrics['avg_handshake_time'] = sum(handshake_times) / len(handshake_times)
+                        metrics['max_handshake_time'] = max(handshake_times)
+            
+            return metrics
+            
+        except Exception as e:
+            self.logger.error(f"Failed to analyze TCP performance: {e}")
+            return {
+                'avg_handshake_time': 0.0,
+                'max_handshake_time': 0.0,
+                'retransmissions': 0,
+                'total_packets': 0,
+                'retransmission_rate': 0.0,
+                'failed_connections': 0
+            }
     
     async def _analyze_dns_performance(self, file_path: str) -> Dict[str, float]:
         """Analyze DNS performance metrics."""
-        # Mock implementation for now  
-        # TODO: Replace with actual DNS analysis using tshark/pyshark
-        return {
-            'avg_response_time': 0.025,
-            'max_response_time': 0.15,
-            'failed_queries': 5,
-            'total_queries': 100,
-            'failure_rate': 0.05,
-            'timeout_queries': 2
-        }
+        try:
+            metrics = {
+                'avg_response_time': 0.0,
+                'max_response_time': 0.0,
+                'failed_queries': 0,
+                'total_queries': 0,
+                'failure_rate': 0.0,
+                'timeout_queries': 0
+            }
+            
+            # Get all DNS queries
+            dns_queries_cmd = [
+                'tshark',
+                '-r', file_path,
+                '-Y', 'dns.flags.response==0',  # DNS queries only
+                '-T', 'fields',
+                '-e', 'frame.number',
+                '-e', 'frame.time_relative',
+                '-e', 'dns.id'
+            ]
+            
+            process = await asyncio.create_subprocess_exec(
+                *dns_queries_cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+            
+            stdout, stderr = await process.communicate()
+            
+            queries = []
+            if process.returncode == 0:
+                lines = stdout.decode().strip().split('\n')
+                for line in lines:
+                    if line.strip():
+                        parts = line.strip().split('\t')
+                        if len(parts) >= 3:
+                            queries.append({
+                                'frame': parts[0],
+                                'time': float(parts[1]) if parts[1].replace('.', '').isdigit() else 0.0,
+                                'id': parts[2]
+                            })
+                
+                metrics['total_queries'] = len(queries)
+            
+            # Get DNS responses
+            dns_responses_cmd = [
+                'tshark',
+                '-r', file_path,
+                '-Y', 'dns.flags.response==1',  # DNS responses only
+                '-T', 'fields',
+                '-e', 'frame.number',
+                '-e', 'frame.time_relative',
+                '-e', 'dns.id',
+                '-e', 'dns.flags.rcode'
+            ]
+            
+            process = await asyncio.create_subprocess_exec(
+                *dns_responses_cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+            
+            stdout, stderr = await process.communicate()
+            
+            responses = []
+            if process.returncode == 0:
+                lines = stdout.decode().strip().split('\n')
+                for line in lines:
+                    if line.strip():
+                        parts = line.strip().split('\t')
+                        if len(parts) >= 4:
+                            responses.append({
+                                'frame': parts[0],
+                                'time': float(parts[1]) if parts[1].replace('.', '').isdigit() else 0.0,
+                                'id': parts[2],
+                                'rcode': parts[3]
+                            })
+            
+            # Match queries with responses and calculate response times
+            response_times = []
+            failed_count = 0
+            
+            for query in queries:
+                # Find matching response
+                matching_response = None
+                for response in responses:
+                    if (response['id'] == query['id'] and 
+                        response['time'] > query['time']):
+                        matching_response = response
+                        break
+                
+                if matching_response:
+                    response_time = matching_response['time'] - query['time']
+                    response_times.append(response_time)
+                    
+                    # Check if it's a failed query (non-zero rcode)
+                    if matching_response['rcode'] != '0':
+                        failed_count += 1
+                else:
+                    # No response found - timeout
+                    metrics['timeout_queries'] += 1
+                    failed_count += 1
+            
+            # Calculate metrics
+            if response_times:
+                metrics['avg_response_time'] = sum(response_times) / len(response_times)
+                metrics['max_response_time'] = max(response_times)
+            
+            metrics['failed_queries'] = failed_count
+            
+            if metrics['total_queries'] > 0:
+                metrics['failure_rate'] = failed_count / metrics['total_queries']
+            
+            return metrics
+            
+        except Exception as e:
+            self.logger.error(f"Failed to analyze DNS performance: {e}")
+            return {
+                'avg_response_time': 0.0,
+                'max_response_time': 0.0,
+                'failed_queries': 0,
+                'total_queries': 0,
+                'failure_rate': 0.0,
+                'timeout_queries': 0
+            }
     
     async def _extract_conversations(self, file_path: str, limit: int = 10) -> List[ConversationFlow]:
         """Extract top network conversations from the capture."""

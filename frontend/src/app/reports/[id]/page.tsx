@@ -65,6 +65,7 @@ import { AppHeader } from '@/components/AppHeader'
 import { LoadingOverlay, ChartSkeleton } from '@/components/LoadingOverlay'
 import { ErrorBoundary, useErrorHandler } from '@/components/ErrorBoundary'
 import NetworkDiagramViewer from '@/components/NetworkDiagramViewer'
+import AdvancedSearch from '@/components/AdvancedSearch'
 
 dayjs.extend(relativeTime)
 
@@ -942,6 +943,16 @@ function ReportViewPageContent() {
                     </Col>
                   )}
                 </Row>
+              </TabPane>
+
+              {/* Advanced Search Tab */}
+              <TabPane tab="Advanced Search" key="search" aria-label="Advanced search and filtering capabilities">
+                <AdvancedSearch 
+                  jobId={reportId}
+                  onResults={(results) => {
+                    message.success(`Found ${results.filteredCount} results in ${results.queryTimeMs.toFixed(1)}ms`)
+                  }}
+                />
               </TabPane>
             </Tabs>
           </Card>

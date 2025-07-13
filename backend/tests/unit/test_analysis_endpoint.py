@@ -36,8 +36,15 @@ class TestAnalysisJobSubmission:
         # Mock validation service
         mock_validation_service = MagicMock()
         mock_validation_service.validate_file_extension.return_value = True
-        mock_validation_service.validate_file_size.return_value = True
+        mock_validation_service.validate_file_size.return_value = {"valid": True}
         mock_validation_service.validate_pcap_file = AsyncMock(return_value={"valid": True})
+        mock_validation_service.comprehensive_file_validation = AsyncMock(return_value={
+            "valid": True,
+            "validation_id": "test_validation_123",
+            "security_score": "clean",
+            "file_type": "pcap",
+            "validation_time": 0.05
+        })
         mock_validation_service.validate_analysis_options.return_value = {
             "valid": True,
             "options": {"analysis_type": "comprehensive", "priority": "normal"}
@@ -170,7 +177,7 @@ class TestAnalysisJobSubmission:
         # Mock validation service
         mock_validation_service = MagicMock()
         mock_validation_service.validate_file_extension.return_value = True
-        mock_validation_service.validate_file_size.return_value = True
+        mock_validation_service.validate_file_size.return_value = {"valid": True}
         mock_validation_service.validate_pcap_file = AsyncMock(return_value={
             "valid": False,
             "error": "Invalid PCAP format"
@@ -201,8 +208,15 @@ class TestAnalysisJobSubmission:
         # Mock validation service
         mock_validation_service = MagicMock()
         mock_validation_service.validate_file_extension.return_value = True
-        mock_validation_service.validate_file_size.return_value = True
+        mock_validation_service.validate_file_size.return_value = {"valid": True}
         mock_validation_service.validate_pcap_file = AsyncMock(return_value={"valid": True})
+        mock_validation_service.comprehensive_file_validation = AsyncMock(return_value={
+            "valid": True,
+            "validation_id": "test_validation_123",
+            "security_score": "clean",
+            "file_type": "pcap",
+            "validation_time": 0.05
+        })
         mock_validation_service.validate_analysis_options.return_value = {
             "valid": True,
             "options": {"analysis_type": "security_focused", "priority": "high"}
@@ -258,8 +272,15 @@ class TestAnalysisJobSubmission:
         # Mock validation service
         mock_validation_service = MagicMock()
         mock_validation_service.validate_file_extension.return_value = True
-        mock_validation_service.validate_file_size.return_value = True
+        mock_validation_service.validate_file_size.return_value = {"valid": True}
         mock_validation_service.validate_pcap_file = AsyncMock(return_value={"valid": True})
+        mock_validation_service.comprehensive_file_validation = AsyncMock(return_value={
+            "valid": True,
+            "validation_id": "test_validation_123",
+            "security_score": "clean",
+            "file_type": "pcap",
+            "validation_time": 0.05
+        })
         mock_validation_service.validate_analysis_options.return_value = {
             "valid": False,
             "errors": ["Invalid analysis type", "Invalid priority level"]
@@ -291,8 +312,15 @@ class TestAnalysisJobSubmission:
         # Mock validation service
         mock_validation_service = MagicMock()
         mock_validation_service.validate_file_extension.return_value = True
-        mock_validation_service.validate_file_size.return_value = True
+        mock_validation_service.validate_file_size.return_value = {"valid": True}
         mock_validation_service.validate_pcap_file = AsyncMock(return_value={"valid": True})
+        mock_validation_service.comprehensive_file_validation = AsyncMock(return_value={
+            "valid": True,
+            "validation_id": "test_validation_123",
+            "security_score": "clean",
+            "file_type": "pcap",
+            "validation_time": 0.05
+        })
         mock_validation_service.validate_analysis_options.return_value = {
             "valid": True,
             "options": {"analysis_type": "comprehensive", "priority": "normal"}
@@ -362,8 +390,15 @@ class TestAnalysisJobSubmission:
         # Mock validation service
         mock_validation_service = MagicMock()
         mock_validation_service.validate_file_extension.return_value = True
-        mock_validation_service.validate_file_size.return_value = True
+        mock_validation_service.validate_file_size.return_value = {"valid": True}
         mock_validation_service.validate_pcap_file = AsyncMock(return_value={"valid": True})
+        mock_validation_service.comprehensive_file_validation = AsyncMock(return_value={
+            "valid": True,
+            "validation_id": "test_validation_123",
+            "security_score": "clean",
+            "file_type": "pcap",
+            "validation_time": 0.05
+        })
         mock_validation_service.validate_analysis_options.return_value = {
             "valid": True,
             "options": {"analysis_type": "comprehensive", "priority": "normal"}

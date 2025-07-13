@@ -7,9 +7,14 @@ from fastapi.responses import StreamingResponse
 from typing import Dict, Any
 import logging
 from io import BytesIO
+from pathlib import Path
+import os
 
 from core.database import get_database
 from services.pdf_export import PDFExportService
+from services.report_generator import get_report_generator, ReportConfig
+from services.pcap_analysis_service import PcapAnalysisService
+from models.analysis_results import AnalysisResults
 
 logger = logging.getLogger(__name__)
 
@@ -266,3 +271,268 @@ def _convert_mongodb_report_to_pdf_format(mongo_report: Dict[str, Any]) -> Dict[
             }
     
     return pdf_data
+
+
+@router.post("/comprehensive-report/{job_id}")
+async def generate_comprehensive_report(
+    job_id: str,
+    report_config: Dict[str, Any] = None
+) -> Dict[str, Any]:
+    """
+    Generate a comprehensive PDF report using the advanced report generator.
+    
+    Args:
+        job_id: The analysis job ID
+        report_config: Optional report configuration
+        
+    Returns:
+        Report generation status and download info
+    """
+    try:
+        logger.info(f"Starting comprehensive report generation for job {job_id}")
+        
+        # Get database connection
+        db = get_database()
+        reports_collection = db["reports"]
+        
+        # Find the analysis results
+        report = reports_collection.find_one({"job_id": job_id})
+        if not report:
+            raise HTTPException(
+                status_code=404,
+                detail="Analysis results not found"
+            )
+        
+        if report.get("status") != "completed":
+            raise HTTPException(
+                status_code=400,
+                detail=f"Analysis is not completed. Status: {report.get('status')}"
+            )
+        
+        # Convert MongoDB report to AnalysisResults object
+        analysis_results = _convert_mongodb_to_analysis_results(report)
+        
+        # Set up report configuration
+        config = ReportConfig()
+        if report_config:
+            # Update config with user preferences
+            if 'include_charts' in report_config:
+                config.include_charts = report_config['include_charts']
+            if 'include_ml_analysis' in report_config:
+                config.include_ml_analysis = report_config['include_ml_analysis']
+            if 'company_name' in report_config:
+                config.company_name = report_config['company_name']
+            if 'report_title' in report_config:
+                config.report_title = report_config['report_title']
+        
+        # Generate output path
+        import tempfile
+        import os
+        temp_dir = tempfile.gettempdir()
+        output_path = os.path.join(temp_dir, f"comprehensive_report_{job_id}.pdf")
+        
+        # Generate comprehensive report
+        report_generator = get_report_generator()
+        result = await report_generator.generate_comprehensive_report(
+            analysis_results, output_path
+        )
+        
+        if result.get('success'):
+            # Store report info in database for later retrieval
+            report_info = {
+                "job_id": job_id,
+                "report_type": "comprehensive",
+                "file_path": output_path,
+                "generated_at": result.get('timestamp'),
+                "file_size": result.get('file_size'),
+                "generation_time": result.get('generation_time'),
+                "sections": result.get('sections_generated'),
+                "charts": result.get('charts_generated')
+            }
+            
+            # Update the report document with comprehensive report info
+            reports_collection.update_one(
+                {"job_id": job_id},
+                {"$set": {"comprehensive_report": report_info}}
+            )
+            
+            return {
+                "status": "success",
+                "message": "Comprehensive report generated successfully",
+                "report_info": report_info,
+                "download_url": f"/api/v1/export/comprehensive-download/{job_id}"
+            }
+        else:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Report generation failed: {result.get('error', 'Unknown error')}"
+            )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error generating comprehensive report for job {job_id}: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to generate comprehensive report: {str(e)}"
+        )
+
+
+@router.get("/comprehensive-download/{job_id}")
+async def download_comprehensive_report(job_id: str) -> StreamingResponse:
+    """
+    Download the generated comprehensive PDF report.
+    
+    Args:
+        job_id: The analysis job ID
+        
+    Returns:
+        StreamingResponse: PDF file download
+    """
+    try:
+        # Get database connection
+        db = get_database()
+        reports_collection = db["reports"]
+        
+        # Find the report
+        report = reports_collection.find_one({"job_id": job_id})
+        if not report:
+            raise HTTPException(
+                status_code=404,
+                detail="Report not found"
+            )
+        
+        # Check if comprehensive report exists
+        comp_report = report.get("comprehensive_report")
+        if not comp_report:
+            raise HTTPException(
+                status_code=404,
+                detail="Comprehensive report not found. Generate it first."
+            )
+        
+        # Check if file exists
+        file_path = comp_report.get("file_path")
+        if not file_path or not os.path.exists(file_path):
+            raise HTTPException(
+                status_code=404,
+                detail="Report file not found on disk"
+            )
+        
+        # Read the PDF file
+        with open(file_path, 'rb') as f:
+            pdf_bytes = f.read()
+        
+        # Generate filename
+        original_filename = report.get("original_filename", "analysis.pcap")
+        pdf_filename = f"comprehensive_report_{Path(original_filename).stem}.pdf"
+        
+        logger.info(f"Serving comprehensive report for job {job_id}, size: {len(pdf_bytes)} bytes")
+        
+        # Return streaming response
+        return StreamingResponse(
+            BytesIO(pdf_bytes),
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f"attachment; filename={pdf_filename}",
+                "Content-Length": str(len(pdf_bytes))
+            }
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error downloading comprehensive report for job {job_id}: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to download report: {str(e)}"
+        )
+
+
+def _convert_mongodb_to_analysis_results(mongo_report: Dict[str, Any]) -> AnalysisResults:
+    """
+    Convert MongoDB report to AnalysisResults object for comprehensive report generation.
+    
+    Args:
+        mongo_report: MongoDB report document
+        
+    Returns:
+        AnalysisResults object
+    """
+    from models.analysis_results import (
+        TrafficStats, PerformanceMetrics, ProtocolStats, 
+        NetworkIssue, SeverityLevel, IssueType
+    )
+    
+    # Extract analysis results
+    analysis_data = mongo_report.get("analysis_results", {})
+    
+    # Create traffic stats
+    traffic_data = analysis_data.get("traffic_stats", {})
+    traffic_stats = TrafficStats(
+        total_packets=traffic_data.get("total_packets", 0),
+        total_bytes=traffic_data.get("total_bytes", 0),
+        duration=traffic_data.get("duration", 0),
+        avg_packet_size=traffic_data.get("avg_packet_size", 0),
+        packets_per_second=traffic_data.get("packets_per_second", 0),
+        bytes_per_second=traffic_data.get("bytes_per_second", 0)
+    )
+    
+    # Create performance metrics
+    perf_data = analysis_data.get("performance_metrics", {})
+    performance_metrics = PerformanceMetrics(
+        avg_latency=perf_data.get("avg_latency", 0.0),
+        max_latency=perf_data.get("max_latency", 0.0),
+        packet_loss_rate=perf_data.get("packet_loss_rate", 0.0),
+        throughput_mbps=perf_data.get("throughput_mbps", 0.0)
+    )
+    
+    # Create protocol stats
+    protocol_data = analysis_data.get("protocol_stats", {})
+    protocol_stats = ProtocolStats(
+        tcp_packets=protocol_data.get("tcp_packets", 0),
+        udp_packets=protocol_data.get("udp_packets", 0),
+        icmp_packets=protocol_data.get("icmp_packets", 0),
+        http_sessions=protocol_data.get("http_sessions", 0),
+        https_sessions=protocol_data.get("https_sessions", 0),
+        dns_queries=protocol_data.get("dns_queries", 0)
+    )
+    
+    # Create network issues
+    issues = []
+    for issue_data in analysis_data.get("issues", []):
+        try:
+            issue = NetworkIssue(
+                type=IssueType(issue_data.get("type", "security_anomalies")),
+                severity=SeverityLevel(issue_data.get("severity", "medium")),
+                description=issue_data.get("description", "Network issue detected"),
+                recommendation=issue_data.get("recommendation", ""),
+                confidence=issue_data.get("confidence", 0.8)
+            )
+            issues.append(issue)
+        except ValueError:
+            # Handle invalid enum values
+            issue = NetworkIssue(
+                type=IssueType.SECURITY_ANOMALIES,
+                severity=SeverityLevel.MEDIUM,
+                description=issue_data.get("description", "Network issue detected"),
+                recommendation=issue_data.get("recommendation", ""),
+                confidence=issue_data.get("confidence", 0.8)
+            )
+            issues.append(issue)
+    
+    # Create AnalysisResults object
+    analysis_results = AnalysisResults(
+        file_path=mongo_report.get("filename", "unknown.pcap"),
+        file_size=mongo_report.get("file_size", 0),
+        traffic_stats=traffic_stats,
+        performance_metrics=performance_metrics,
+        protocol_stats=protocol_stats,
+        issues=issues,
+        protocol_analysis=analysis_data.get("protocol_analysis", {}),
+        start_time=analysis_data.get("start_time", ""),
+        end_time=analysis_data.get("end_time", ""),
+        analysis_options=analysis_data.get("analysis_options", {}),
+        processing_time=mongo_report.get("processing_time", 0.0)
+    )
+    
+    return analysis_results

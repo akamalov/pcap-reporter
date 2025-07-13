@@ -8,6 +8,12 @@ import asyncio
 import sys
 import os
 from pathlib import Path
+import pytest
+from httpx import AsyncClient
+from main import app
+from core.config import get_settings
+
+settings = get_settings()
 
 # Add the backend directory to the Python path
 backend_dir = Path(__file__).parent
@@ -70,7 +76,6 @@ def test_config():
     print("\nTesting configuration...")
     
     try:
-        from core.config import settings
         print(f"✓ Database URL: {settings.database_url}")
         print(f"✓ Redis URL: {settings.redis_url}")
         print(f"✓ Environment: {settings.environment}")
@@ -103,7 +108,6 @@ def test_fastapi_app():
     print("\nTesting FastAPI application...")
     
     try:
-        from main import app
         print(f"✓ FastAPI app created")
         print(f"✓ App title: {app.title}")
         print(f"✓ Routes count: {len(app.routes)}")

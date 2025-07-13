@@ -14,12 +14,23 @@ import json
 
 # Import Scapy components for deep packet analysis
 try:
-    from scapy.all import rdpcap, IP, TCP, UDP, DNS, Raw, Ether
+    from scapy.all import rdpcap, IP, TCP, UDP, DNS, Raw, Ether, ICMP, ARP
     from scapy.layers.http import HTTPRequest, HTTPResponse
+    from scapy.layers.tls import TLS
+    from scapy.layers.netbios import NBTSession
+    from scapy.layers.dhcp import DHCP
+    from scapy.layers.smtp import SMTP
+    from scapy.layers.ftp import FTP
     SCAPY_AVAILABLE = True
 except ImportError:
     SCAPY_AVAILABLE = False
     logging.warning("Scapy not available - deep inspection will be limited")
+
+import hashlib
+import base64
+import re
+import struct
+from datetime import datetime, timedelta
 
 
 class PcapDeepInspector:
@@ -31,8 +42,12 @@ class PcapDeepInspector:
     - DNS pattern analysis and tunneling detection
     - TCP stream reconstruction
     - Protocol anomaly detection
-    - Payload content analysis
+    - Payload content analysis and malware detection
     - Metadata extraction and timing analysis
+    - Data exfiltration detection
+    - Encrypted traffic analysis
+    - Application layer protocol detection
+    - Network behavior anomaly detection
     """
     
     def __init__(self, config: Optional[Dict[str, Any]] = None):
@@ -46,8 +61,16 @@ class PcapDeepInspector:
         
         # Default configuration
         self.config = {
-            'max_payload_size': 4096,
+            'max_payload_size': 8192,
             'enable_http_analysis': True,
+            'enable_dns_analysis': True,
+            'enable_tls_analysis': True,
+            'enable_tcp_reconstruction': True,
+            'enable_payload_analysis': True,
+            'enable_malware_detection': True,
+            'enable_data_exfiltration_detection': True,
+            'max_packets_per_stream': 1000,
+            'stream_timeout': 300,  # 5 minutes
             'enable_dns_analysis': True,
             'enable_tcp_reconstruction': True,
             'enable_payload_analysis': True,

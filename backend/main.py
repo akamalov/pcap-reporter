@@ -12,10 +12,12 @@ import logging
 from typing import Dict, Any
 
 # Import our modules
-from core.config import settings
-from core.database import init_db
+from core.config import get_settings
+from core.database import init_db, wait_for_database, close_db
 from core.celery_app import celery_app
 from api.v1.api import api_router
+
+settings = get_settings()
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -29,13 +31,29 @@ async def lifespan(app: FastAPI):
     """
     # Startup
     logger.info("Starting MCP PCAP Reporter API...")
-    await init_db()
-    logger.info("Database initialized successfully")
+    
+    try:
+        # Wait for database to be available
+        logger.info("Waiting for database connection...")
+        await wait_for_database(timeout=60)
+        
+        # Initialize database
+        await init_db()
+        logger.info("Database initialized successfully")
+        
+    except Exception as e:
+        logger.error(f"Failed to initialize application: {e}")
+        raise
     
     yield
     
     # Shutdown
     logger.info("Shutting down MCP PCAP Reporter API...")
+    try:
+        await close_db()
+        logger.info("Database connection closed")
+    except Exception as e:
+        logger.error(f"Error during shutdown: {e}")
 
 
 # Create FastAPI application
@@ -48,13 +66,14 @@ app = FastAPI(
 )
 
 # Set up CORS
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=settings.BACKEND_CORS_ORIGINS,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+if settings.BACKEND_CORS_ORIGINS:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=[str(origin) for origin in settings.BACKEND_CORS_ORIGINS],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
 # Include API routes
 app.include_router(api_router, prefix=settings.API_V1_STR)

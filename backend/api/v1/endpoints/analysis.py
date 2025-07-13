@@ -2,7 +2,7 @@
 Analysis endpoints for PCAP file upload and analysis submission.
 """
 
-from fastapi import APIRouter, UploadFile, File, HTTPException, Depends, Form
+from fastapi import APIRouter, UploadFile, File, HTTPException, Depends, Form, Request
 from typing import Dict, Any, Optional
 import os
 import hashlib
@@ -32,8 +32,30 @@ def calculate_file_hash(file_path: str) -> str:
     return hash_sha256.hexdigest()
 
 
+def get_client_ip(request: Request) -> str:
+    """
+    Extract client IP address from request headers with proxy support.
+    """
+    # Check for forwarded headers (load balancer/proxy)
+    x_forwarded_for = request.headers.get("X-Forwarded-For")
+    if x_forwarded_for:
+        # Take the first IP in the chain (original client)
+        return x_forwarded_for.split(",")[0].strip()
+    
+    x_real_ip = request.headers.get("X-Real-IP")
+    if x_real_ip:
+        return x_real_ip.strip()
+    
+    # Fall back to direct connection IP
+    if hasattr(request, "client") and request.client:
+        return request.client.host
+    
+    return "unknown"
+
+
 @router.post("/submit")
 async def submit_analysis_job(
+    request: Request,
     file: UploadFile = File(...),
     analysis_type: Optional[str] = Form("comprehensive"),
     priority: Optional[str] = Form("normal"),
@@ -46,6 +68,9 @@ async def submit_analysis_job(
     """
     file_path = None
     try:
+        # Extract client IP for security logging and audit trail
+        client_ip = get_client_ip(request)
+        
         # Validate no file provided
         if not file or not file.filename:
             raise HTTPException(
@@ -68,30 +93,49 @@ async def submit_analysis_job(
         content = await file.read()
         file_size = len(content)
         
-        # Validate file size
-        if not validation_service.validate_file_size(file_size):
+        # Validate file size with enhanced validation
+        size_validation = validation_service.validate_file_size(file_size)
+        if not size_validation["valid"]:
+            status_code = 413 if "exceeds" in size_validation["error"] else 400
             raise HTTPException(
-                status_code=413,
+                status_code=status_code,
                 detail={
-                    "error": "File too large",
-                    "detail": f"File size exceeds maximum limit of {settings.UPLOAD_MAX_SIZE // (1024*1024)}MB",
+                    "error": "File size validation failed",
+                    "detail": size_validation["error"],
                     "max_size": settings.UPLOAD_MAX_SIZE,
                     "received_size": file_size
                 }
             )
         
-        # Reset file and validate PCAP format
+        # Comprehensive file validation with security, integrity, and format checks
         await file.seek(0)
-        pcap_validation = await validation_service.validate_pcap_file(file)
+        comprehensive_validation = await validation_service.comprehensive_file_validation(file, client_ip=client_ip)
         
-        if not pcap_validation["valid"]:
-            raise HTTPException(
-                status_code=400,
-                detail={
-                    "error": "Invalid PCAP file",
-                    "detail": pcap_validation["error"]
-                }
-            )
+        if not comprehensive_validation["valid"]:
+            # Determine appropriate status code based on security or format issues
+            status_code = 403 if comprehensive_validation.get("security_threat") else 400
+            error_detail = {
+                "error": "Comprehensive validation failed",
+                "detail": comprehensive_validation["error"],
+                "validation_id": comprehensive_validation.get("validation_id")
+            }
+            
+            # Add security context if available
+            if comprehensive_validation.get("security_threat"):
+                error_detail["security_issues"] = comprehensive_validation.get("security_issues", [])
+                error_detail["threat_severity"] = comprehensive_validation.get("severity", "unknown")
+            
+            # Add format detection context
+            if "detected_format" in comprehensive_validation:
+                error_detail["detected_format"] = comprehensive_validation["detected_format"]
+            if "pcap_validation" in comprehensive_validation:
+                pcap_info = comprehensive_validation["pcap_validation"]
+                if "magic" in pcap_info:
+                    error_detail["magic_number"] = pcap_info["magic"]
+                if "possible_format" in pcap_info:
+                    error_detail["suggested_format"] = pcap_info["possible_format"]
+            
+            raise HTTPException(status_code=status_code, detail=error_detail)
         
         # Validate analysis options
         options_dict = {
@@ -173,9 +217,10 @@ async def submit_analysis_job(
         report.job_id = task.id
         await report.save()
         
-        logger.info(f"PCAP analysis submitted - file: {file.filename}, job_id: {job_id}, task_id: {task.id}")
+        logger.info(f"PCAP analysis submitted - file: {file.filename}, job_id: {job_id}, task_id: {task.id}, "
+                   f"client_ip: {client_ip}, validation_id: {comprehensive_validation.get('validation_id', 'N/A')}")
         
-        # Build response
+        # Build response with validation details
         response = {
             "job_id": job_id,
             "status": "pending",
@@ -184,7 +229,13 @@ async def submit_analysis_job(
             "created_at": datetime.utcnow().isoformat() + "Z",
             "estimated_completion": estimated_completion.isoformat() + "Z",
             "analysis_type": validated_options["analysis_type"],
-            "priority": validated_options["priority"]
+            "priority": validated_options["priority"],
+            "validation": {
+                "validation_id": comprehensive_validation.get("validation_id"),
+                "security_score": comprehensive_validation.get("security_score", "unknown"),
+                "file_type": comprehensive_validation.get("file_type", "pcap"),
+                "validation_time": comprehensive_validation.get("validation_time", 0)
+            }
         }
         
         # Add options if they differ from defaults
@@ -216,14 +267,16 @@ async def submit_analysis_job(
 # Keep the old upload endpoint for backward compatibility
 @router.post("/upload")
 async def upload_pcap_file(
+    request: Request,
     file: UploadFile = File(...),
-    settings: Settings = Depends(get_settings)
+    settings: Settings = Depends(get_settings),
+    validation_service: ValidationService = Depends(get_validation_service)
 ) -> Dict[str, Any]:
     """
     Legacy upload endpoint for backward compatibility.
     Redirects to the new submit endpoint with default options.
     """
-    return await submit_analysis_job(file, "comprehensive", "normal", settings)
+    return await submit_analysis_job(request, file, "comprehensive", "normal", settings, validation_service)
 
 
 @router.get("/status/{job_id}")

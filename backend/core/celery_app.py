@@ -5,7 +5,9 @@ Celery application configuration for MCP PCAP Reporter.
 from celery import Celery
 import logging
 
-from core.config import settings
+from core.config import get_settings
+
+settings = get_settings()
 
 logger = logging.getLogger(__name__)
 
@@ -14,10 +16,12 @@ celery_app = Celery(
     "pcap_reporter",
     broker=settings.CELERY_BROKER_URL,
     backend=settings.CELERY_RESULT_BACKEND,
-    include=[
-        "tasks.analysis_tasks",
-        # "tasks.report_tasks",  # TODO: Create this module
-    ]
+    include=["services.analysis_tasks"],
+)
+
+# Optional configuration
+celery_app.conf.update(
+    task_track_started=True,
 )
 
 # Celery configuration

@@ -7,6 +7,8 @@ from pydantic import validator
 from pydantic_settings import BaseSettings
 from typing import List, Optional
 import os
+import ast
+from functools import lru_cache
 
 
 class Settings(BaseSettings):
@@ -42,15 +44,29 @@ class Settings(BaseSettings):
     BACKEND_CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:8000"]
     
     @validator("BACKEND_CORS_ORIGINS", pre=True)
-    def assemble_cors_origins(cls, v):
+    def assemble_cors_origins(cls, v: str | List[str]) -> List[str]:
+        if not v:
+            return []
         if isinstance(v, str):
-            return [i.strip() for i in v.split(",")]
+            try:
+                # Safely evaluate string literal to a list
+                return ast.literal_eval(v)
+            except (ValueError, SyntaxError):
+                # Fallback to comma-separated string
+                return [i.strip() for i in v.split(",")]
         return v
     
     @validator("ALLOWED_HOSTS", pre=True)
-    def assemble_allowed_hosts(cls, v):
+    def assemble_allowed_hosts(cls, v: str | List[str]) -> List[str]:
+        if not v:
+            return []
         if isinstance(v, str):
-            return [i.strip() for i in v.split(",")]
+            try:
+                # Safely evaluate string literal to a list
+                return ast.literal_eval(v)
+            except (ValueError, SyntaxError):
+                # Fallback to comma-separated string
+                return [i.strip() for i in v.split(",")]
         return v
     
     # File Storage
@@ -76,13 +92,15 @@ class Settings(BaseSettings):
         env_file_encoding = "utf-8"
 
 
-# Create global settings instance
-settings = Settings()
+# The global settings instance is created here, which can be problematic for tests.
+# It's better to create and inject the settings instance where needed.
+# settings = Settings()
 
 
+@lru_cache()
 def get_settings() -> Settings:
     """
     Get the application settings.
-    This function can be used as a dependency in FastAPI.
+    Uses lru_cache to ensure the Settings object is only created once.
     """
-    return settings 
+    return Settings() 
