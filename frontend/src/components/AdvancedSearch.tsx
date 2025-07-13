@@ -8,30 +8,42 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Switch } from '@/components/ui/switch';
-import { Textarea } from '@/components/ui/textarea';
-import { 
-  Search, 
-  Filter, 
-  Plus, 
-  Minus, 
-  RotateCcw, 
-  Download,
-  Clock,
-  Shield,
-  Network,
-  ChevronDown,
-  ChevronUp,
-  AlertTriangle
-} from 'lucide-react';
+import {
+  Button,
+  Input,
+  Select,
+  Card,
+  Badge,
+  Tabs,
+  Collapse,
+  Switch,
+  Space,
+  Row,
+  Col,
+  Typography,
+  Alert,
+  Divider,
+  Tooltip,
+  Statistic,
+  message,
+  Form
+} from 'antd';
+import {
+  SearchOutlined,
+  FilterOutlined,
+  PlusOutlined,
+  MinusOutlined,
+  ReloadOutlined,
+  DownloadOutlined,
+  ClockCircleOutlined,
+  SecurityScanOutlined,
+  GlobalOutlined,
+  ExclamationTriangleOutlined
+} from '@ant-design/icons';
+
+const { Title, Text } = Typography;
+const { Option } = Select;
+const { Panel } = Collapse;
 
 interface SearchCriteria {
   field: string;
@@ -83,8 +95,7 @@ const AdvancedSearch: React.FC<AdvancedSearchProps> = ({ jobId, onResults }) => 
   const [filterRules, setFilterRules] = useState<FilterRule[]>([]);
   const [availableFields, setAvailableFields] = useState<any>({});
   const [statistics, setStatistics] = useState<any>({});
-  const [suggestions, setSuggestions] = useState<string[]>([]);
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [activeKey, setActiveKey] = useState<string[]>(['1']);
 
   // Available search operators
   const operators = [
@@ -163,11 +174,15 @@ const AdvancedSearch: React.FC<AdvancedSearchProps> = ({ jobId, onResults }) => 
       if (data.status === 'success') {
         setResults(data.results);
         onResults?.(data.results);
+        message.success('Search completed successfully');
       } else {
         setError(data.detail || 'Search failed');
+        message.error(data.detail || 'Search failed');
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Search failed');
+      const errorMsg = err instanceof Error ? err.message : 'Search failed';
+      setError(errorMsg);
+      message.error(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -184,11 +199,15 @@ const AdvancedSearch: React.FC<AdvancedSearchProps> = ({ jobId, onResults }) => 
       if (data.status === 'success') {
         setResults(data.results);
         onResults?.(data.results);
+        message.success(`Filter "${ruleName}" applied successfully`);
       } else {
         setError(data.detail || 'Filter failed');
+        message.error(data.detail || 'Filter failed');
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Filter failed');
+      const errorMsg = err instanceof Error ? err.message : 'Filter failed';
+      setError(errorMsg);
+      message.error(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -245,396 +264,376 @@ const AdvancedSearch: React.FC<AdvancedSearchProps> = ({ jobId, onResults }) => 
   };
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="flex items-center gap-2">
-                <Search className="w-5 h-5" />
-                Advanced Search & Filtering
-              </CardTitle>
-              <CardDescription>
+    <div style={{ padding: '16px 0' }}>
+      <Collapse 
+        activeKey={activeKey} 
+        onChange={setActiveKey}
+        ghost
+      >
+        <Panel 
+          header={
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <SearchOutlined />
+              <Title level={4} style={{ margin: 0 }}>Advanced Search & Filtering</Title>
+              <Text type="secondary" style={{ marginLeft: '16px' }}>
                 Search and filter network analysis data with sophisticated criteria
-              </CardDescription>
+              </Text>
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setIsCollapsed(!isCollapsed)}
-            >
-              {isCollapsed ? <ChevronDown className="w-4 h-4" /> : <ChevronUp className="w-4 h-4" />}
-            </Button>
-          </div>
-        </CardHeader>
-        
-        <Collapsible open={!isCollapsed}>
-          <CollapsibleContent>
-            <CardContent>
-              <Tabs defaultValue="search" className="w-full">
-                <TabsList className="grid w-full grid-cols-4">
-                  <TabsTrigger value="search">Custom Search</TabsTrigger>
-                  <TabsTrigger value="rules">Filter Rules</TabsTrigger>
-                  <TabsTrigger value="quick">Quick Filters</TabsTrigger>
-                  <TabsTrigger value="stats">Statistics</TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="search" className="space-y-4">
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-4">
-                      <Label htmlFor="logicalOp">Logical Operator:</Label>
+          } 
+          key="1"
+        >
+          <Card>
+            <Tabs defaultActiveKey="search" type="card">
+              <Tabs.TabPane tab="Custom Search" key="search">
+                <Space direction="vertical" size="large" style={{ width: '100%' }}>
+                  <Row align="middle" gutter={16}>
+                    <Col span={4}>
+                      <Text strong>Logical Operator:</Text>
+                    </Col>
+                    <Col span={6}>
                       <Select
                         value={searchQuery.logicalOperator}
-                        onValueChange={(value) => setSearchQuery(prev => ({ ...prev, logicalOperator: value }))}
+                        onChange={(value) => setSearchQuery(prev => ({ ...prev, logicalOperator: value }))}
+                        style={{ width: '100%' }}
                       >
-                        <SelectTrigger className="w-32">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="AND">AND</SelectItem>
-                          <SelectItem value="OR">OR</SelectItem>
-                        </SelectContent>
+                        <Option value="AND">AND</Option>
+                        <Option value="OR">OR</Option>
                       </Select>
-                    </div>
+                    </Col>
+                  </Row>
 
-                    {searchQuery.criteria.map((criteria, index) => (
-                      <Card key={index} className="p-4">
-                        <div className="grid grid-cols-12 gap-2 items-end">
-                          <div className="col-span-3">
-                            <Label>Field</Label>
-                            <Select
-                              value={criteria.field}
-                              onValueChange={(value) => updateCriteria(index, 'field', value)}
-                            >
-                              <SelectTrigger>
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {getAllFields().map((field) => (
-                                  <SelectItem key={field.value} value={field.value}>
-                                    {field.label}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
+                  {searchQuery.criteria.map((criteria, index) => (
+                    <Card key={index} size="small" style={{ backgroundColor: '#fafafa' }}>
+                      <Row gutter={[16, 16]} align="middle">
+                        <Col span={6}>
+                          <Text strong>Field</Text>
+                          <Select
+                            value={criteria.field}
+                            onChange={(value) => updateCriteria(index, 'field', value)}
+                            style={{ width: '100%', marginTop: '4px' }}
+                          >
+                            {getAllFields().map((field) => (
+                              <Option key={field.value} value={field.value}>
+                                {field.label}
+                              </Option>
+                            ))}
+                          </Select>
+                        </Col>
 
-                          <div className="col-span-2">
-                            <Label>Operator</Label>
-                            <Select
-                              value={criteria.operator}
-                              onValueChange={(value) => updateCriteria(index, 'operator', value)}
-                            >
-                              <SelectTrigger>
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {getOperatorsForField(criteria.field).map((op) => (
-                                  <SelectItem key={op.value} value={op.value}>
-                                    {op.label}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
+                        <Col span={4}>
+                          <Text strong>Operator</Text>
+                          <Select
+                            value={criteria.operator}
+                            onChange={(value) => updateCriteria(index, 'operator', value)}
+                            style={{ width: '100%', marginTop: '4px' }}
+                          >
+                            {getOperatorsForField(criteria.field).map((op) => (
+                              <Option key={op.value} value={op.value}>
+                                {op.label}
+                              </Option>
+                            ))}
+                          </Select>
+                        </Col>
 
-                          <div className="col-span-4">
-                            <Label>Value</Label>
-                            <Input
-                              value={criteria.value}
-                              onChange={(e) => updateCriteria(index, 'value', e.target.value)}
-                              placeholder="Enter search value..."
+                        <Col span={8}>
+                          <Text strong>Value</Text>
+                          <Input
+                            value={criteria.value}
+                            onChange={(e) => updateCriteria(index, 'value', e.target.value)}
+                            placeholder="Enter search value..."
+                            style={{ marginTop: '4px' }}
+                          />
+                        </Col>
+
+                        <Col span={4}>
+                          <Text strong>Case Sensitive</Text>
+                          <div style={{ marginTop: '8px' }}>
+                            <Switch
+                              checked={criteria.caseSensitive}
+                              onChange={(checked) => updateCriteria(index, 'caseSensitive', checked)}
                             />
                           </div>
+                        </Col>
 
-                          <div className="col-span-2">
-                            <div className="flex items-center space-x-2">
-                              <Switch
-                                checked={criteria.caseSensitive}
-                                onCheckedChange={(checked) => updateCriteria(index, 'caseSensitive', checked)}
-                              />
-                              <Label className="text-sm">Case Sensitive</Label>
-                            </div>
-                          </div>
-
-                          <div className="col-span-1">
-                            <Button
-                              variant="destructive"
-                              size="sm"
-                              onClick={() => removeCriteria(index)}
-                              disabled={searchQuery.criteria.length === 1}
-                            >
-                              <Minus className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      </Card>
-                    ))}
-
-                    <div className="flex gap-2">
-                      <Button variant="outline" onClick={addCriteria}>
-                        <Plus className="w-4 h-4 mr-2" />
-                        Add Criteria
-                      </Button>
-                      <Button onClick={executeSearch} disabled={loading}>
-                        <Search className="w-4 h-4 mr-2" />
-                        {loading ? 'Searching...' : 'Search'}
-                      </Button>
-                      <Button variant="outline" onClick={resetSearch}>
-                        <RotateCcw className="w-4 h-4 mr-2" />
-                        Reset
-                      </Button>
-                    </div>
-                  </div>
-                </TabsContent>
-
-                <TabsContent value="rules" className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {filterRules.map((rule) => (
-                      <Card key={rule.name} className="cursor-pointer hover:shadow-md transition-shadow">
-                        <CardHeader className="pb-3">
-                          <div className="flex items-center justify-between">
-                            <CardTitle className="text-sm">{rule.name}</CardTitle>
-                            <Badge variant={rule.type === 'predefined' ? 'default' : 'secondary'}>
-                              {rule.type}
-                            </Badge>
-                          </div>
-                          <CardDescription className="text-xs">
-                            {rule.description}
-                          </CardDescription>
-                        </CardHeader>
-                        <CardContent className="pt-0">
+                        <Col span={2}>
                           <Button
-                            size="sm"
-                            className="w-full"
+                            type="primary"
+                            danger
+                            size="small"
+                            icon={<MinusOutlined />}
+                            onClick={() => removeCriteria(index)}
+                            disabled={searchQuery.criteria.length === 1}
+                            style={{ marginTop: '20px' }}
+                          />
+                        </Col>
+                      </Row>
+                    </Card>
+                  ))}
+
+                  <Space>
+                    <Button icon={<PlusOutlined />} onClick={addCriteria}>
+                      Add Criteria
+                    </Button>
+                    <Button 
+                      type="primary" 
+                      icon={<SearchOutlined />} 
+                      onClick={executeSearch} 
+                      loading={loading}
+                    >
+                      Search
+                    </Button>
+                    <Button icon={<ReloadOutlined />} onClick={resetSearch}>
+                      Reset
+                    </Button>
+                  </Space>
+                </Space>
+              </Tabs.TabPane>
+
+              <Tabs.TabPane tab="Filter Rules" key="rules">
+                <Row gutter={[16, 16]}>
+                  {filterRules.map((rule) => (
+                    <Col span={8} key={rule.name}>
+                      <Card
+                        size="small"
+                        hoverable
+                        title={
+                          <Space>
+                            <Text strong>{rule.name}</Text>
+                            <Badge 
+                              status={rule.type === 'predefined' ? 'success' : 'default'} 
+                              text={rule.type}
+                            />
+                          </Space>
+                        }
+                        actions={[
+                          <Button
+                            key="apply"
+                            type="primary"
+                            size="small"
+                            icon={<FilterOutlined />}
                             onClick={() => applyFilterRule(rule.name)}
                             disabled={!rule.enabled || loading}
                           >
-                            <Filter className="w-4 h-4 mr-2" />
                             Apply Filter
                           </Button>
-                        </CardContent>
+                        ]}
+                      >
+                        <Text type="secondary">{rule.description}</Text>
                       </Card>
-                    ))}
-                  </div>
-                </TabsContent>
+                    </Col>
+                  ))}
+                </Row>
+              </Tabs.TabPane>
 
-                <TabsContent value="quick" className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <Card className="p-4">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Shield className="w-5 h-5 text-red-500" />
-                        <h3 className="font-semibold">Security Events</h3>
-                      </div>
-                      <div className="space-y-2">
-                        <Button size="sm" variant="outline" className="w-full justify-start">
-                          <AlertTriangle className="w-4 h-4 mr-2" />
+              <Tabs.TabPane tab="Quick Filters" key="quick">
+                <Row gutter={[16, 16]}>
+                  <Col span={6}>
+                    <Card size="small" title={<Space><SecurityScanOutlined style={{ color: '#f5222d' }} />Security Events</Space>}>
+                      <Space direction="vertical" style={{ width: '100%' }}>
+                        <Button size="small" block icon={<ExclamationTriangleOutlined />}>
                           Critical Threats
                         </Button>
-                        <Button size="sm" variant="outline" className="w-full justify-start">
+                        <Button size="small" block>
                           Suspicious IPs
                         </Button>
-                        <Button size="sm" variant="outline" className="w-full justify-start">
+                        <Button size="small" block>
                           Failed Connections
                         </Button>
-                      </div>
+                      </Space>
                     </Card>
+                  </Col>
 
-                    <Card className="p-4">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Network className="w-5 h-5 text-blue-500" />
-                        <h3 className="font-semibold">Network Traffic</h3>
-                      </div>
-                      <div className="space-y-2">
-                        <Button size="sm" variant="outline" className="w-full justify-start">
+                  <Col span={6}>
+                    <Card size="small" title={<Space><GlobalOutlined style={{ color: '#1890ff' }} />Network Traffic</Space>}>
+                      <Space direction="vertical" style={{ width: '100%' }}>
+                        <Button size="small" block>
                           High Volume
                         </Button>
-                        <Button size="sm" variant="outline" className="w-full justify-start">
+                        <Button size="small" block>
                           External Connections
                         </Button>
-                        <Button size="sm" variant="outline" className="w-full justify-start">
+                        <Button size="small" block>
                           Unusual Ports
                         </Button>
-                      </div>
+                      </Space>
                     </Card>
+                  </Col>
 
-                    <Card className="p-4">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Clock className="w-5 h-5 text-green-500" />
-                        <h3 className="font-semibold">Performance</h3>
-                      </div>
-                      <div className="space-y-2">
-                        <Button size="sm" variant="outline" className="w-full justify-start">
+                  <Col span={6}>
+                    <Card size="small" title={<Space><ClockCircleOutlined style={{ color: '#52c41a' }} />Performance</Space>}>
+                      <Space direction="vertical" style={{ width: '100%' }}>
+                        <Button size="small" block>
                           Slow Connections
                         </Button>
-                        <Button size="sm" variant="outline" className="w-full justify-start">
+                        <Button size="small" block>
                           High Latency
                         </Button>
-                        <Button size="sm" variant="outline" className="w-full justify-start">
+                        <Button size="small" block>
                           Timeouts
                         </Button>
-                      </div>
+                      </Space>
                     </Card>
+                  </Col>
 
-                    <Card className="p-4">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Filter className="w-5 h-5 text-purple-500" />
-                        <h3 className="font-semibold">Protocol Analysis</h3>
-                      </div>
-                      <div className="space-y-2">
-                        <Button size="sm" variant="outline" className="w-full justify-start">
+                  <Col span={6}>
+                    <Card size="small" title={<Space><FilterOutlined style={{ color: '#722ed1' }} />Protocol Analysis</Space>}>
+                      <Space direction="vertical" style={{ width: '100%' }}>
+                        <Button size="small" block>
                           HTTP Errors
                         </Button>
-                        <Button size="sm" variant="outline" className="w-full justify-start">
+                        <Button size="small" block>
                           DNS Issues
                         </Button>
-                        <Button size="sm" variant="outline" className="w-full justify-start">
+                        <Button size="small" block>
                           TCP Problems
                         </Button>
-                      </div>
+                      </Space>
                     </Card>
-                  </div>
-                </TabsContent>
+                  </Col>
+                </Row>
+              </Tabs.TabPane>
 
-                <TabsContent value="stats" className="space-y-4">
-                  {statistics && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                      <Card className="p-4">
-                        <h3 className="font-semibold mb-2">Overview</h3>
-                        <div className="space-y-1 text-sm">
-                          <div className="flex justify-between">
-                            <span>Total Records:</span>
-                            <span className="font-mono">{statistics.total_records?.toLocaleString()}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span>Unique Source IPs:</span>
-                            <span className="font-mono">{statistics.ips?.unique_src_count}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span>Unique Dest IPs:</span>
-                            <span className="font-mono">{statistics.ips?.unique_dst_count}</span>
-                          </div>
-                        </div>
+              <Tabs.TabPane tab="Statistics" key="stats">
+                {statistics && (
+                  <Row gutter={[16, 16]}>
+                    <Col span={6}>
+                      <Card size="small" title="Overview">
+                        <Statistic title="Total Records" value={statistics.total_records} />
+                        <Divider />
+                        <Space direction="vertical" style={{ width: '100%' }}>
+                          <Row justify="space-between">
+                            <Text>Unique Source IPs:</Text>
+                            <Text strong>{statistics.ips?.unique_src_count}</Text>
+                          </Row>
+                          <Row justify="space-between">
+                            <Text>Unique Dest IPs:</Text>
+                            <Text strong>{statistics.ips?.unique_dst_count}</Text>
+                          </Row>
+                        </Space>
                       </Card>
+                    </Col>
 
-                      <Card className="p-4">
-                        <h3 className="font-semibold mb-2">Top Protocols</h3>
-                        <div className="space-y-1 text-sm">
+                    <Col span={6}>
+                      <Card size="small" title="Top Protocols">
+                        <Space direction="vertical" style={{ width: '100%' }}>
                           {Object.entries(statistics.protocols || {}).slice(0, 5).map(([protocol, count]) => (
-                            <div key={protocol} className="flex justify-between">
-                              <span>{protocol}:</span>
-                              <span className="font-mono">{(count as number).toLocaleString()}</span>
-                            </div>
+                            <Row key={protocol} justify="space-between">
+                              <Text>{protocol}:</Text>
+                              <Text strong>{(count as number).toLocaleString()}</Text>
+                            </Row>
                           ))}
-                        </div>
+                        </Space>
                       </Card>
+                    </Col>
 
-                      <Card className="p-4">
-                        <h3 className="font-semibold mb-2">Security Stats</h3>
-                        <div className="space-y-1 text-sm">
+                    <Col span={6}>
+                      <Card size="small" title="Security Stats">
+                        <Space direction="vertical" style={{ width: '100%' }}>
                           {Object.entries(statistics.security?.threat_levels || {}).map(([level, count]) => (
-                            <div key={level} className="flex justify-between">
-                              <span className="capitalize">{level}:</span>
-                              <span className="font-mono">{(count as number).toLocaleString()}</span>
-                            </div>
+                            <Row key={level} justify="space-between">
+                              <Text style={{ textTransform: 'capitalize' }}>{level}:</Text>
+                              <Text strong>{(count as number).toLocaleString()}</Text>
+                            </Row>
                           ))}
-                        </div>
+                        </Space>
                       </Card>
+                    </Col>
 
-                      <Card className="p-4">
-                        <h3 className="font-semibold mb-2">Traffic Stats</h3>
-                        <div className="space-y-1 text-sm">
-                          <div className="flex justify-between">
-                            <span>Max Packets:</span>
-                            <span className="font-mono">{statistics.traffic?.max_packets?.toLocaleString()}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span>Max Bytes:</span>
-                            <span className="font-mono">{(statistics.traffic?.max_bytes / 1024 / 1024)?.toFixed(1)}MB</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span>Avg Duration:</span>
-                            <span className="font-mono">{statistics.traffic?.avg_duration?.toFixed(2)}s</span>
-                          </div>
-                        </div>
+                    <Col span={6}>
+                      <Card size="small" title="Traffic Stats">
+                        <Space direction="vertical" style={{ width: '100%' }}>
+                          <Row justify="space-between">
+                            <Text>Max Packets:</Text>
+                            <Text strong>{statistics.traffic?.max_packets?.toLocaleString()}</Text>
+                          </Row>
+                          <Row justify="space-between">
+                            <Text>Max Bytes:</Text>
+                            <Text strong>{(statistics.traffic?.max_bytes / 1024 / 1024)?.toFixed(1)}MB</Text>
+                          </Row>
+                          <Row justify="space-between">
+                            <Text>Avg Duration:</Text>
+                            <Text strong>{statistics.traffic?.avg_duration?.toFixed(2)}s</Text>
+                          </Row>
+                        </Space>
                       </Card>
-                    </div>
-                  )}
-                </TabsContent>
-              </Tabs>
-            </CardContent>
-          </CollapsibleContent>
-        </Collapsible>
-      </Card>
+                    </Col>
+                  </Row>
+                )}
+              </Tabs.TabPane>
+            </Tabs>
+          </Card>
+        </Panel>
+      </Collapse>
 
       {error && (
-        <Card className="border-red-200 bg-red-50">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-2 text-red-700">
-              <AlertTriangle className="w-5 h-5" />
-              <span>{error}</span>
-            </div>
-          </CardContent>
-        </Card>
+        <Alert
+          message="Search Error"
+          description={error}
+          type="error"
+          showIcon
+          style={{ marginTop: '16px' }}
+        />
       )}
 
       {results && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <span>Search Results</span>
-              <div className="flex items-center gap-2 text-sm text-gray-500">
-                <span>{results.filteredCount} of {results.totalCount} results</span>
-                <span>({results.queryTimeMs.toFixed(1)}ms)</span>
-                <Button size="sm" variant="outline">
-                  <Download className="w-4 h-4 mr-2" />
+        <Card 
+          title={
+            <Row justify="space-between" align="middle">
+              <Text strong>Search Results</Text>
+              <Space>
+                <Text type="secondary">
+                  {results.filteredCount} of {results.totalCount} results ({results.queryTimeMs.toFixed(1)}ms)
+                </Text>
+                <Button icon={<DownloadOutlined />} size="small">
                   Export
                 </Button>
-              </div>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {results.matches.slice(0, 10).map((match, index) => (
-                <Card key={index} className="p-3">
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                    <div>
-                      <Label className="text-xs text-gray-500">Type</Label>
-                      <p className="font-mono">{match.type}</p>
-                    </div>
-                    {match.src_ip && (
-                      <div>
-                        <Label className="text-xs text-gray-500">Source</Label>
-                        <p className="font-mono">{match.src_ip}:{match.src_port}</p>
-                      </div>
-                    )}
-                    {match.dst_ip && (
-                      <div>
-                        <Label className="text-xs text-gray-500">Destination</Label>
-                        <p className="font-mono">{match.dst_ip}:{match.dst_port}</p>
-                      </div>
-                    )}
-                    {match.protocol && (
-                      <div>
-                        <Label className="text-xs text-gray-500">Protocol</Label>
-                        <p className="font-mono">{match.protocol}</p>
-                      </div>
-                    )}
-                  </div>
-                  {match.description && (
-                    <p className="text-sm text-gray-600 mt-2">{match.description}</p>
+              </Space>
+            </Row>
+          }
+          style={{ marginTop: '16px' }}
+        >
+          <Space direction="vertical" style={{ width: '100%' }}>
+            {results.matches.slice(0, 10).map((match, index) => (
+              <Card key={index} size="small" style={{ backgroundColor: '#fafafa' }}>
+                <Row gutter={[16, 8]}>
+                  <Col span={6}>
+                    <Text type="secondary">Type</Text>
+                    <div><Text code>{match.type}</Text></div>
+                  </Col>
+                  {match.src_ip && (
+                    <Col span={6}>
+                      <Text type="secondary">Source</Text>
+                      <div><Text code>{match.src_ip}:{match.src_port}</Text></div>
+                    </Col>
                   )}
-                </Card>
-              ))}
-              {results.matches.length > 10 && (
-                <div className="text-center py-4">
-                  <Button variant="outline">
-                    Load More Results ({results.matches.length - 10} remaining)
-                  </Button>
-                </div>
-              )}
-            </div>
-          </CardContent>
+                  {match.dst_ip && (
+                    <Col span={6}>
+                      <Text type="secondary">Destination</Text>
+                      <div><Text code>{match.dst_ip}:{match.dst_port}</Text></div>
+                    </Col>
+                  )}
+                  {match.protocol && (
+                    <Col span={6}>
+                      <Text type="secondary">Protocol</Text>
+                      <div><Text code>{match.protocol}</Text></div>
+                    </Col>
+                  )}
+                </Row>
+                {match.description && (
+                  <div style={{ marginTop: '8px' }}>
+                    <Text type="secondary">{match.description}</Text>
+                  </div>
+                )}
+              </Card>
+            ))}
+            {results.matches.length > 10 && (
+              <div style={{ textAlign: 'center', padding: '16px' }}>
+                <Button>
+                  Load More Results ({results.matches.length - 10} remaining)
+                </Button>
+              </div>
+            )}
+          </Space>
         </Card>
       )}
     </div>
