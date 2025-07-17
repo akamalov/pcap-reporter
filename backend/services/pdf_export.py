@@ -74,7 +74,7 @@ class PDFExportService:
 
     def convert_html_to_pdf(self, html_content: str) -> bytes:
         """
-        Convert HTML content to PDF using WeasyPrint.
+        Convert HTML content to PDF using ReportLab (WeasyPrint fallback due to compatibility issues).
         
         Args:
             html_content: HTML string to convert
@@ -86,16 +86,12 @@ class PDFExportService:
             Exception: If conversion fails
         """
         try:
-            # Create WeasyPrint HTML object
-            html_doc = weasyprint.HTML(string=html_content)
-            
-            # Generate PDF
-            pdf_bytes = html_doc.write_pdf()
-            
-            return pdf_bytes
+            # Use ReportLab directly due to WeasyPrint compatibility issues
+            self.logger.info("Using ReportLab for PDF generation (WeasyPrint compatibility issue)")
+            return self._fallback_pdf_generation(html_content)
             
         except Exception as e:
-            self.logger.error(f"WeasyPrint conversion failed: {str(e)}")
+            self.logger.error(f"PDF generation failed: {str(e)}")
             raise Exception(f"HTML to PDF conversion failed: {str(e)}")
 
     def generate_pdf_filename(self, original_filename: str) -> str:
@@ -111,6 +107,60 @@ class PDFExportService:
         # Remove extension and add PDF suffix
         base_name = Path(original_filename).stem
         return f"{base_name}_analysis_report.pdf"
+
+    def _fallback_pdf_generation(self, html_content: str) -> bytes:
+        """
+        Fallback PDF generation using simpler method when WeasyPrint fails.
+        
+        Args:
+            html_content: HTML content to convert
+            
+        Returns:
+            bytes: PDF content
+        """
+        from reportlab.lib.pagesizes import letter
+        from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+        from reportlab.lib.styles import getSampleStyleSheet
+        from io import BytesIO
+        import re
+        
+        # Create a BytesIO buffer
+        buffer = BytesIO()
+        
+        # Create PDF document
+        doc = SimpleDocTemplate(buffer, pagesize=letter)
+        story = []
+        
+        # Get styles
+        styles = getSampleStyleSheet()
+        
+        # Simple HTML to text conversion
+        text_content = re.sub('<[^<]+?>', '', html_content)  # Remove HTML tags
+        text_content = text_content.replace('&nbsp;', ' ')
+        text_content = text_content.replace('&amp;', '&')
+        text_content = text_content.replace('&lt;', '<')
+        text_content = text_content.replace('&gt;', '>')
+        
+        # Split into lines and create paragraphs
+        lines = text_content.split('\n')
+        for line in lines:
+            line = line.strip()
+            if line:
+                if len(line) > 100:  # Long lines, probably content
+                    story.append(Paragraph(line, styles['Normal']))
+                else:  # Short lines, probably headers
+                    story.append(Paragraph(line, styles['Heading2']))
+                story.append(Spacer(1, 6))
+        
+        # Build PDF
+        doc.build(story)
+        
+        # Get PDF bytes
+        buffer.seek(0)
+        pdf_bytes = buffer.read()
+        buffer.close()
+        
+        return pdf_bytes
 
     def _prepare_template_context(self, report_data: Dict[str, Any]) -> Dict[str, Any]:
         """

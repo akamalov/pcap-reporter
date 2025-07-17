@@ -19,7 +19,7 @@ import {
   Tabs,
   Statistic,
   List,
-  message,
+  App,
   Tooltip,
   Badge,
   Result
@@ -71,12 +71,12 @@ dayjs.extend(relativeTime)
 
 const { Content, Footer } = Layout
 const { Title, Paragraph, Text } = Typography
-const { TabPane } = Tabs
 
 function ReportViewPageContent() {
   const params = useParams()
   const router = useRouter()
   const reportId = params.id as string
+  const { message } = App.useApp()
   
   const [report, setReport] = useState<AnalysisResult | null>(null)
   const [loading, setLoading] = useState(true)
@@ -123,7 +123,8 @@ function ReportViewPageContent() {
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `${report.filename.replace(/\.[^/.]+$/, '')}_analysis_report.pdf`
+      const filename = report.filename || 'analysis_report'
+      a.download = `${filename.replace(/\.[^/.]+$/, '')}_analysis_report.pdf`
       a.setAttribute('aria-label', 'Download analysis report as PDF')
       document.body.appendChild(a)
       a.click()
@@ -357,10 +358,12 @@ function ReportViewPageContent() {
               size="large"
               aria-label="Report analysis sections"
               tabBarStyle={{ marginBottom: '24px' }}
-            >
-              
-              {/* Overview Tab */}
-              <TabPane tab="Overview" key="overview" aria-label="Report overview and statistics">
+              items={[
+                {
+                  key: 'overview',
+                  label: 'Overview',
+                  children: (
+                    <div aria-label="Report overview and statistics">
                 <Row gutter={[24, 24]}>
                   
                   {/* Basic Information */}
@@ -483,10 +486,14 @@ function ReportViewPageContent() {
                     </Card>
                   </Col>
                 </Row>
-              </TabPane>
-
-              {/* Protocol Analysis Tab */}
-              <TabPane tab="Protocol Analysis" key="protocols" aria-label="Detailed protocol analysis">
+                    </div>
+                  )
+                },
+                {
+                  key: 'protocols',
+                  label: 'Protocol Analysis',
+                  children: (
+                    <div aria-label="Detailed protocol analysis">
                 <Row gutter={[24, 24]}>
                   
                   {/* TCP Analysis */}
@@ -662,10 +669,14 @@ function ReportViewPageContent() {
                     </Col>
                   )}
                 </Row>
-              </TabPane>
-
-              {/* Security Analysis Tab */}
-              <TabPane tab="Security Analysis" key="security" aria-label="Security analysis and threats">
+                    </div>
+                  )
+                },
+                {
+                  key: 'security',
+                  label: 'Security Analysis',
+                  children: (
+                    <div aria-label="Security analysis and threats">
                 <Row gutter={[24, 24]}>
                   
                   {/* Security Overview */}
@@ -820,10 +831,14 @@ function ReportViewPageContent() {
                     </Col>
                   )}
                 </Row>
-              </TabPane>
-
-              {/* Network Diagrams Tab */}
-              <TabPane tab="Network Diagrams" key="diagrams" aria-label="Network topology and flow diagrams">
+                    </div>
+                  )
+                },
+                {
+                  key: 'diagrams',
+                  label: 'Network Diagrams',
+                  children: (
+                    <div aria-label="Network topology and flow diagrams">
                 {report.status === 'processing' ? (
                   <ChartSkeleton height={600} showTitle={true} showLegend={true} />
                 ) : (
@@ -833,10 +848,14 @@ function ReportViewPageContent() {
                     height={600}
                   />
                 )}
-              </TabPane>
-
-              {/* Performance Tab */}
-              <TabPane tab="Performance" key="performance" aria-label="Network performance metrics and analytics">
+                    </div>
+                  )
+                },
+                {
+                  key: 'performance',
+                  label: 'Performance',
+                  children: (
+                    <div aria-label="Network performance metrics and analytics">
                 <Row gutter={[24, 24]}>
                   
                   {/* Top Talkers */}
@@ -948,18 +967,25 @@ function ReportViewPageContent() {
                     </Col>
                   )}
                 </Row>
-              </TabPane>
-
-              {/* Advanced Search Tab */}
-              <TabPane tab="Advanced Search" key="search" aria-label="Advanced search and filtering capabilities">
-                <AdvancedSearch 
-                  jobId={reportId}
-                  onResults={(results) => {
-                    message.success(`Found ${results.filteredCount} results in ${results.queryTimeMs.toFixed(1)}ms`)
-                  }}
-                />
-              </TabPane>
-            </Tabs>
+                    </div>
+                  )
+                },
+                {
+                  key: 'search',
+                  label: 'Advanced Search',
+                  children: (
+                    <div aria-label="Advanced search and filtering capabilities">
+                      <AdvancedSearch 
+                        jobId={reportId}
+                        onResults={(results) => {
+                          message.success(`Found ${results.filteredCount} results in ${results.queryTimeMs.toFixed(1)}ms`)
+                        }}
+                      />
+                    </div>
+                  )
+                }
+              ]}
+            />
           </Card>
         </div>
       </Content>
@@ -977,14 +1003,16 @@ function ReportViewPageContent() {
 // Main component with error boundary
 export default function ReportViewPage() {
   return (
-    <ErrorBoundary 
-      showDetails={process.env.NODE_ENV === 'development'}
-      onError={(error, errorInfo) => {
-        console.error('Report page error:', error, errorInfo)
-        // In production, send to error reporting service
-      }}
-    >
-      <ReportViewPageContent />
-    </ErrorBoundary>
+    <App>
+      <ErrorBoundary 
+        showDetails={process.env.NODE_ENV === 'development'}
+        onError={(error, errorInfo) => {
+          console.error('Report page error:', error, errorInfo)
+          // In production, send to error reporting service
+        }}
+      >
+        <ReportViewPageContent />
+      </ErrorBoundary>
+    </App>
   )
 } 

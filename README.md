@@ -1,4 +1,4 @@
-# 🌐 MCP-PCAP Reporter v1.0
+# 🌐 PCAP Reporter v1.0
 
 A comprehensive network packet capture analysis tool with professional-grade reporting, security scanning, and network visualization capabilities. Built with modern web technologies and ready for production deployment.
 

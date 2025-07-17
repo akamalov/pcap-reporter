@@ -12,6 +12,7 @@ import os
 
 from core.database import get_database
 from services.pdf_export import PDFExportService
+from services.simple_pdf_export import SimplePDFExportService
 from services.report_generator import get_report_generator, ReportConfig
 from services.pcap_analysis_service import PcapAnalysisService
 from models.analysis_results import AnalysisResults
@@ -39,11 +40,11 @@ async def export_pdf(job_id: str) -> StreamingResponse:
         logger.info(f"Starting PDF export for job {job_id}")
         
         # Get database connection
-        db = get_database()
+        db = await get_database()
         
         # Query the reports collection for the job
         reports_collection = db["reports"]
-        report = reports_collection.find_one({"job_id": job_id})
+        report = await reports_collection.find_one({"job_id": job_id})
         
         if not report:
             logger.warning(f"Report not found for job {job_id}")
@@ -63,20 +64,31 @@ async def export_pdf(job_id: str) -> StreamingResponse:
         # Convert MongoDB document to PDF-compatible format
         pdf_data = _convert_mongodb_report_to_pdf_format(report)
         
-        # Generate PDF
-        pdf_service = PDFExportService()
-        pdf_bytes = pdf_service.generate_pdf_report(pdf_data)
+        # Generate PDF - try advanced service first, fallback to simple service
+        service_used = None
+        try:
+            pdf_service = PDFExportService()
+            pdf_bytes = pdf_service.generate_pdf_report(pdf_data)
+            content_type = "application/pdf"
+            service_used = pdf_service
+            logger.info("PDF generated using advanced PDF service")
+        except Exception as pdf_error:
+            logger.warning(f"Advanced PDF generation failed: {pdf_error}, falling back to simple text report")
+            simple_service = SimplePDFExportService()
+            pdf_bytes = simple_service.generate_pdf_report(pdf_data)
+            content_type = "text/plain"
+            service_used = simple_service
         
         # Generate filename
         original_filename = report.get("original_filename", report.get("filename", "report.pcap"))
-        pdf_filename = pdf_service.generate_pdf_filename(original_filename)
+        pdf_filename = service_used.generate_pdf_filename(original_filename)
         
         logger.info(f"PDF generated successfully for job {job_id}, size: {len(pdf_bytes)} bytes")
         
         # Return streaming response
         return StreamingResponse(
             BytesIO(pdf_bytes),
-            media_type="application/pdf",
+            media_type=content_type,
             headers={
                 "Content-Disposition": f"attachment; filename={pdf_filename}",
                 "Content-Length": str(len(pdf_bytes))
@@ -292,11 +304,11 @@ async def generate_comprehensive_report(
         logger.info(f"Starting comprehensive report generation for job {job_id}")
         
         # Get database connection
-        db = get_database()
+        db = await get_database()
         reports_collection = db["reports"]
         
         # Find the analysis results
-        report = reports_collection.find_one({"job_id": job_id})
+        report = await reports_collection.find_one({"job_id": job_id})
         if not report:
             raise HTTPException(
                 status_code=404,
@@ -351,7 +363,7 @@ async def generate_comprehensive_report(
             }
             
             # Update the report document with comprehensive report info
-            reports_collection.update_one(
+            await reports_collection.update_one(
                 {"job_id": job_id},
                 {"$set": {"comprehensive_report": report_info}}
             )
@@ -391,11 +403,11 @@ async def download_comprehensive_report(job_id: str) -> StreamingResponse:
     """
     try:
         # Get database connection
-        db = get_database()
+        db = await get_database()
         reports_collection = db["reports"]
         
         # Find the report
-        report = reports_collection.find_one({"job_id": job_id})
+        report = await reports_collection.find_one({"job_id": job_id})
         if not report:
             raise HTTPException(
                 status_code=404,
