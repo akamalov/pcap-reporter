@@ -78,6 +78,16 @@ if settings.BACKEND_CORS_ORIGINS:
 # Include API routes
 app.include_router(api_router, prefix=settings.API_V1_STR)
 
+# Add request logging middleware
+@app.middleware("http")
+async def log_requests(request, call_next):
+    print(f"🔥 REQUEST: {request.method} {request.url}")
+    logger.info(f"Request: {request.method} {request.url}")
+    response = await call_next(request)
+    print(f"🔥 RESPONSE: {response.status_code}")
+    logger.info(f"Response: {response.status_code}")
+    return response
+
 
 @app.get("/health")
 async def health_check() -> Dict[str, Any]:
@@ -148,7 +158,7 @@ if __name__ == "__main__":
     uvicorn.run(
         "main:app",
         host="0.0.0.0",
-        port=8000,
+        port=9090,
         reload=True,
         log_level="info"
     ) 

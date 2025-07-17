@@ -31,13 +31,21 @@ class ValidationService:
         
         # PCAP magic numbers (comprehensive list)
         self.PCAP_MAGIC_NUMBERS = {
+            # Standard PCAP formats
             b'\xd4\xc3\xb2\xa1': 'pcap',      # Standard PCAP (little-endian)
             b'\xa1\xb2\xc3\xd4': 'pcap',      # Standard PCAP (big-endian)
-            b'\x4d\x3c\xb2\xa1': 'pcap',      # Modified PCAP
+            b'\x4d\x3c\xb2\xa1': 'pcap',      # Modified PCAP (little-endian)
             b'\xa1\xb2\x3c\x4d': 'pcap',      # Modified PCAP (big-endian)
+            # Nanosecond PCAP formats
+            b'\x34\xcd\xb2\xa1': 'pcap',      # Nanosecond PCAP (little-endian)
+            b'\xa1\xb2\xcd\x34': 'pcap',      # Nanosecond PCAP (big-endian)
+            # PCAP-NG formats
             b'\x0a\x0d\x0d\x0a': 'pcapng',    # PCAP-NG Section Header Block
             b'\x4d\x3c\x2b\x1a': 'pcapng',    # Alternative PCAP-NG
             b'\x1a\x2b\x3c\x4d': 'pcapng',    # PCAP-NG (big-endian)
+            # Additional Wireshark and other tool formats
+            b'\x34\x12\xb2\xa1': 'pcap',      # Some Wireshark variants
+            b'\xa1\xb2\x12\x34': 'pcap',      # Some Wireshark variants (big-endian)
         }
         
         # Suspicious file patterns that might indicate malicious files
@@ -227,6 +235,18 @@ class ValidationService:
             
             # Security check: scan for suspicious patterns
             security_check = self._check_file_security(header_chunk)
+            print(f"🔥 Security check result: {security_check}")
+            
+            # Special handling for IBM iSeries Communication Trace
+            if security_check.get("file_type") == "ibm-iseries-trace":
+                print("🔥 IBM iSeries trace detected in PCAP validation - accepting as valid")
+                return {
+                    "valid": True,
+                    "file_type": "ibm-iseries-trace",
+                    "magic": "fffe2000",
+                    "format": "IBM iSeries Communication Trace"
+                }
+            
             if not security_check["safe"]:
                 return {
                     "valid": False,
@@ -245,9 +265,19 @@ class ValidationService:
             if not file_type:
                 # Check if this might be a different file format
                 format_guess = self._guess_file_format(header)
+                
+                # Provide more helpful error messages
+                if format_guess:
+                    error_msg = f"File appears to be {format_guess}, not a PCAP file"
+                else:
+                    error_msg = f"Invalid PCAP magic number (got {magic.hex()})"
+                
+                # Debug logging
+                print(f"🔥 PCAP validation failed: magic={magic.hex()}, format_guess={format_guess}")
+                
                 return {
                     "valid": False,
-                    "error": "Invalid PCAP magic number",
+                    "error": error_msg,
                     "file_type": None,
                     "magic": magic.hex(),
                     "possible_format": format_guess
@@ -304,8 +334,8 @@ class ValidationService:
                     "error": f"Unsupported PCAP version: {version_major}.{version_minor}"
                 }
             
-            # Validate snaplen (should be reasonable)
-            if snaplen > 65535 or snaplen == 0:
+            # Validate snaplen (should be reasonable) - allow up to 1MB for modern captures
+            if snaplen > 1048576 or snaplen == 0:  # 1MB max instead of 64KB
                 return {
                     "valid": False,
                     "error": f"Invalid snaplen: {snaplen}"
@@ -457,10 +487,42 @@ class ValidationService:
         """
         security_issues = []
         
-        # Check for suspicious file headers
-        for pattern in self.SUSPICIOUS_PATTERNS:
+        # Check for IBM iSeries Communication Trace format first
+        if file_data.startswith(b'\xff\xfe\x20\x00'):
+            try:
+                decoded = file_data[:200].decode('utf-16le', errors='ignore')
+                print(f"🔥 IBM trace check: decoded='{decoded[:50]}...'")
+                if 'COMMUNICATIONS TRACE' in decoded or 'COMMUNICATION TRACE' in decoded:
+                    # This is a legitimate IBM iSeries trace, not suspicious
+                    print("🔥 IBM iSeries trace detected - marking as safe")
+                    return {
+                        "safe": True,
+                        "reason": "IBM iSeries Communication Trace detected",
+                        "file_type": "ibm-iseries-trace"
+                    }
+            except Exception as e:
+                print(f"🔥 IBM trace check error: {e}")
+                pass
+        
+        # Check for suspicious file headers, but be more selective
+        # Only flag truly malicious patterns, not just different file formats
+        malicious_patterns = [
+            b'\x4d\x5a',  # PE/EXE header (Windows)
+            b'\x7f\x45\x4c\x46',  # ELF header (Linux)
+            b'\xca\xfe\xba\xbe',  # Mach-O header (macOS, 64-bit)
+            b'\xfe\xed\xfa\xce',  # Mach-O header (macOS, 32-bit)
+            b'\xfe\xed\xfa\xcf',  # Mach-O header (macOS, 64-bit)
+            b'\xcf\xfa\xed\xfe',  # Mach-O header (reverse)
+        ]
+        
+        for pattern in malicious_patterns:
             if file_data.startswith(pattern):
-                security_issues.append(f"Suspicious file header: {pattern.hex()}")
+                if pattern == b'\x4d\x5a':
+                    security_issues.append("File appears to be Windows executable, not PCAP")
+                elif pattern == b'\x7f\x45\x4c\x46':
+                    security_issues.append("File appears to be Linux executable, not PCAP")
+                else:
+                    security_issues.append(f"Suspicious executable header: {pattern.hex()}")
         
         # Check for malware indicators
         malware_count = 0
@@ -475,8 +537,8 @@ class ValidationService:
         
         # Advanced content analysis
         content_analysis = self._analyze_file_content(file_data)
-        if not content_analysis["safe"]:
-            security_issues.extend(content_analysis["issues"])
+        if not content_analysis.get("safe", True):
+            security_issues.extend(content_analysis.get("issues", []))
         
         # Entropy analysis (detect encryption/compression)
         entropy = self._calculate_entropy(file_data)
@@ -485,13 +547,13 @@ class ValidationService:
         
         # Pattern analysis
         pattern_analysis = self._analyze_suspicious_patterns(file_data)
-        if pattern_analysis["suspicious"]:
-            security_issues.extend(pattern_analysis["issues"])
+        if pattern_analysis.get("suspicious", False):
+            security_issues.extend(pattern_analysis.get("issues", []))
         
         # File structure validation
         structure_check = self._validate_file_structure(file_data)
-        if not structure_check["valid"]:
-            security_issues.append(structure_check["issue"])
+        if not structure_check.get("valid", True):
+            security_issues.append(structure_check.get("issue", "File structure validation failed"))
         
         if security_issues:
             return {
@@ -542,8 +604,8 @@ class ValidationService:
         
         # Check for embedded files (polyglot detection)
         embedded_file_check = self._check_embedded_files(file_data)
-        if embedded_file_check["found"]:
-            issues.append(f"Embedded file detected: {embedded_file_check['type']}")
+        if embedded_file_check.get("found", False):
+            issues.append(f"Embedded file detected: {embedded_file_check.get('type', 'unknown')}")
         
         return {
             "safe": len(issues) == 0,
@@ -599,20 +661,53 @@ class ValidationService:
                 issues.append("Long repetitive pattern detected (potential padding)")
                 break
         
-        # Check for simple patterns (AAAA, ABAB, etc.)
+        # Check for simple patterns (AAAA, ABAB, etc.) - but be realistic for PCAP files
         if len(file_data) >= 1000:
             sample = file_data[:1000]
             
-            # Check for AAAA pattern
-            if b'\xaa\xaa\xaa\xaa' in sample or b'\x00\x00\x00\x00' in sample:
-                issues.append("Simple repetitive pattern detected")
+            # Check for AAAA pattern - but PCAP files can have legitimate repeated patterns
+            # Only flag if there are EXCESSIVE repeated patterns across large portions
+            repeated_pattern_count = 0
+            for i in range(0, min(len(sample) - 16, 500), 16):
+                chunk = sample[i:i+16]
+                if len(set(chunk)) == 1:  # All bytes identical
+                    repeated_pattern_count += 1
+            
+            # Only flag if more than 50% of chunks are identical (very suspicious)
+            if repeated_pattern_count > 15:  # 15 out of ~30 chunks
+                issues.append("Excessive repetitive pattern detected")
+            
+            # Check for null bytes - only flag if there are too many consecutive nulls
+            null_count = 0
+            max_consecutive_nulls = 0
+            for byte in sample:
+                if byte == 0:
+                    null_count += 1
+                    max_consecutive_nulls = max(max_consecutive_nulls, null_count)
+                else:
+                    null_count = 0
+            
+            # Only flag if there are more than 100 consecutive null bytes (very suspicious)
+            if max_consecutive_nulls > 100:
+                issues.append("Excessive null byte padding detected")
                 
-            # Check for ABAB pattern
-            for i in range(0, min(len(sample) - 8, 100), 4):
-                pattern = sample[i:i+4]
-                if sample[i+4:i+8] == pattern and len(set(pattern)) <= 2:
-                    issues.append("Alternating pattern detected")
-                    break
+            # Check for ABAB pattern - but be much more restrictive
+            # PCAP files can have legitimate alternating patterns in network data
+            # Only check for truly suspicious patterns (same 4-byte pattern repeated many times)
+            suspicious_alternating = 0
+            for i in range(0, min(len(sample) - 32, 200), 32):
+                pattern_4 = sample[i:i+4]
+                # Check if the same 4-byte pattern repeats 8 times (32 bytes total)
+                matches = 0
+                for j in range(i, min(i+32, len(sample)), 4):
+                    if sample[j:j+4] == pattern_4:
+                        matches += 1
+                if matches >= 8:  # Same 4-byte pattern 8 times in a row
+                    suspicious_alternating += 1
+            
+            # Only flag if multiple highly suspicious alternating patterns are found
+            if suspicious_alternating > 2:
+                issues.append("Multiple suspicious alternating patterns detected")
         
         return issues
     
@@ -698,7 +793,25 @@ class ValidationService:
         # Check if it starts with a valid PCAP magic number
         magic = file_data[:4]
         if magic not in self.PCAP_MAGIC_NUMBERS:
-            return {"valid": False, "issue": "Invalid PCAP magic number"}
+            # Check for IBM iSeries Communication Trace format
+            if magic == b'\xff\xfe\x20\x00':  # UTF-16 LE BOM followed by space
+                try:
+                    # Try to decode and check for IBM trace markers
+                    decoded = file_data[:200].decode('utf-16le', errors='ignore')
+                    print(f"🔥 File structure check: decoded='{decoded[:50]}...'")
+                    if 'COMMUNICATIONS TRACE' in decoded or 'COMMUNICATION TRACE' in decoded:
+                        print("🔥 IBM iSeries trace detected in file structure validation")
+                        return {"valid": True, "format": "ibm-iseries-trace", "issue": None}
+                except Exception as e:
+                    print(f"🔥 File structure IBM check error: {e}")
+                    pass
+            
+            # Try to identify what type of file this actually is
+            format_guess = self._guess_file_format(file_data[:24])
+            if format_guess:
+                return {"valid": False, "issue": f"File appears to be {format_guess}, not a PCAP file (magic: {magic.hex()})"}
+            else:
+                return {"valid": False, "issue": f"Invalid PCAP magic number (got {magic.hex()})"}
         
         # For PCAP files, validate basic structure
         if self.PCAP_MAGIC_NUMBERS[magic] == 'pcap':
@@ -710,8 +823,8 @@ class ValidationService:
                 if version_major != 2 or version_minor != 4:
                     return {"valid": False, "issue": f"Invalid PCAP version: {version_major}.{version_minor}"}
                 
-                # Validate snaplen
-                if snaplen > 262144 or snaplen == 0:  # 256KB max snaplen
+                # Validate snaplen - allow up to 1MB for modern captures
+                if snaplen > 1048576 or snaplen == 0:  # 1MB max snaplen
                     return {"valid": False, "issue": f"Suspicious snaplen value: {snaplen}"}
                 
             except struct.error:
@@ -768,6 +881,21 @@ class ValidationService:
             return "PNG image"
         elif header.startswith(b'%PDF'):
             return "PDF document"
+        elif header.startswith(b'\xff\xfe'):
+            # Check if this might be an IBM iSeries communication trace
+            try:
+                # Try to decode the beginning to check for IBM trace markers
+                decoded = header.decode('utf-16le', errors='ignore')
+                if 'COMMUNICATIONS TRACE' in decoded or 'COMMUNICATION TRACE' in decoded:
+                    return "IBM iSeries Communication Trace"
+                else:
+                    return "UTF-16 LE text file"
+            except:
+                return "UTF-16 LE text file"
+        elif header.startswith(b'\xfe\xff'):
+            return "UTF-16 BE text file"
+        elif header.startswith(b'\xef\xbb\xbf'):
+            return "UTF-8 text file with BOM"
         elif header[:4].isascii() and header[:4].isprintable():
             return "Text file"
         else:
@@ -807,33 +935,33 @@ class ValidationService:
             
             # Step 4: Size validation
             size_validation = self.validate_file_size(file_size)
-            if not size_validation["valid"]:
+            if not size_validation.get("valid", False):
                 self._log_security_event("invalid_size", file.filename, client_ip, validation_id, 
                                        extra_data={"size": file_size})
-                return self._create_validation_result(False, size_validation["error"], validation_id, client_ip)
+                return self._create_validation_result(False, size_validation.get("error", "File size validation failed"), validation_id, client_ip)
             
             # Step 5: Content-based security analysis
             await file.seek(0)
             security_check = self._check_file_security(content[:8192])  # First 8KB for analysis
             
-            if not security_check["safe"]:
+            if not security_check.get("safe", True):
                 severity = security_check.get("severity", "medium")
                 self._log_security_event("security_threat", file.filename, client_ip, validation_id, 
                                        extra_data={
-                                           "issues": security_check["all_issues"],
+                                           "issues": security_check.get("all_issues", []),
                                            "severity": severity
                                        })
-                return self._create_validation_result(False, f"Security threat detected: {security_check['reason']}", 
+                return self._create_validation_result(False, f"Security threat detected: {security_check.get('reason', 'Unknown security issue')}", 
                                                     validation_id, client_ip, severity=severity)
             
             # Step 6: PCAP format validation
             await file.seek(0)
             pcap_validation = await self.validate_pcap_file(file, check_content=True)
             
-            if not pcap_validation["valid"]:
+            if not pcap_validation.get("valid", False):
                 self._log_security_event("invalid_format", file.filename, client_ip, validation_id,
-                                       extra_data={"error": pcap_validation["error"]})
-                return self._create_validation_result(False, pcap_validation["error"], validation_id, client_ip)
+                                       extra_data={"error": pcap_validation.get("error", "PCAP validation failed")})
+                return self._create_validation_result(False, pcap_validation.get("error", "PCAP validation failed"), validation_id, client_ip)
             
             # Step 7: Calculate file hash for integrity
             file_hash = self.calculate_file_hash_from_content(content)
@@ -841,12 +969,17 @@ class ValidationService:
             # Step 8: Deep content analysis (for larger files)
             deep_analysis = {}
             if file_size > 1024:  # Only for files > 1KB
-                deep_analysis = self._perform_deep_content_analysis(content)
-                if not deep_analysis["safe"]:
-                    self._log_security_event("deep_analysis_threat", file.filename, client_ip, validation_id,
-                                           extra_data=deep_analysis["details"])
-                    return self._create_validation_result(False, f"Deep analysis failed: {deep_analysis['reason']}", 
-                                                        validation_id, client_ip, severity="high")
+                # Skip deep analysis for IBM iSeries traces - they're legitimate text-based traces
+                if pcap_validation.get("file_type") == "ibm-iseries-trace":
+                    print("🔥 Skipping deep analysis for IBM iSeries trace")
+                    deep_analysis = {"safe": True, "reason": "IBM iSeries trace - deep analysis skipped"}
+                else:
+                    deep_analysis = self._perform_deep_content_analysis(content)
+                    if not deep_analysis.get("safe", True):
+                        self._log_security_event("deep_analysis_threat", file.filename, client_ip, validation_id,
+                                               extra_data=deep_analysis.get("details", {}))
+                        return self._create_validation_result(False, f"Deep analysis failed: {deep_analysis.get('reason', 'Unknown deep analysis issue')}", 
+                                                            validation_id, client_ip, severity="high")
             
             # Step 9: Generate validation report
             validation_time = time.time() - validation_start
@@ -856,7 +989,7 @@ class ValidationService:
                                        "file_size": file_size,
                                        "file_hash": file_hash,
                                        "validation_time": validation_time,
-                                       "file_type": pcap_validation["file_type"]
+                                       "file_type": pcap_validation.get("file_type", "unknown")
                                    })
             
             # Reset file position
@@ -870,7 +1003,7 @@ class ValidationService:
                     "size": file_size,
                     "size_mb": round(file_size / (1024*1024), 2),
                     "hash": file_hash,
-                    "type": pcap_validation["file_type"],
+                    "type": pcap_validation.get("file_type", "unknown"),
                     "magic": pcap_validation.get("magic")
                 },
                 "security_analysis": {
@@ -1033,7 +1166,8 @@ class ValidationService:
             lsb_ratio = lsb_pattern / min(len(content), 1000)
             
             # In normal files, LSB should be roughly 50%
-            if abs(lsb_ratio - 0.5) > 0.1:  # Deviation > 10%
+            # But PCAP files can have legitimate patterns, so be more lenient
+            if abs(lsb_ratio - 0.5) > 0.25:  # Deviation > 25% (was 10%)
                 indicators.append("Unusual LSB distribution")
         
         # Check for metadata anomalies
@@ -1046,7 +1180,7 @@ class ValidationService:
                 else:
                     break
             
-            if trailing_nulls > 50:  # Unusual amount of trailing nulls
+            if trailing_nulls > 80:  # Unusual amount of trailing nulls (was 50)
                 indicators.append("Excessive trailing null bytes")
         
         return {

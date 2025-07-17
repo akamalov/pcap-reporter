@@ -66,7 +66,8 @@ class Report(Document):
             IndexModel([("file_size", DESCENDING), ("created_at", DESCENDING)]),
             IndexModel([("total_packets", DESCENDING), ("created_at", DESCENDING)]),
             
-            # Job lookup and status tracking
+            # Job lookup and status tracking - unique constraint on job_id
+            IndexModel([("job_id", ASCENDING)], unique=True),
             IndexModel([("job_id", ASCENDING), ("status", ASCENDING)]),
             
             # Filename search
@@ -164,4 +165,27 @@ class Report(Document):
         """Override save to update timestamps and metrics."""
         self.updated_at = datetime.utcnow()
         self.update_processing_metrics()
-        return await super().save(*args, **kwargs) 
+        return await super().save(*args, **kwargs)
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert report to dictionary format for API responses."""
+        return {
+            "id": str(self.id),
+            "job_id": self.job_id,
+            "original_filename": self.original_filename,
+            "status": self.status.value,
+            "created_at": self.created_at.isoformat(),
+            "updated_at": self.updated_at.isoformat(),
+            "started_at": self.started_at.isoformat() if self.started_at else None,
+            "completed_at": self.completed_at.isoformat() if self.completed_at else None,
+            "file_path": self.file_path,
+            "file_size": self.file_size,
+            "file_hash": self.file_hash,
+            "analysis_results": self.analysis_results,
+            "summary": self.summary,
+            "error_message": self.error_message,
+            "processing_time": self.processing_time,
+            "analysis_options": self.analysis_options,
+            "total_packets": self.total_packets,
+            "duration": self.duration
+        } 

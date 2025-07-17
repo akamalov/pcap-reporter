@@ -46,7 +46,7 @@ export async function GET() {
 
     // Check backend API connectivity (optional, non-blocking)
     try {
-      const backendUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+      const backendUrl = process.env.REACT_APP_API_URL || 'http://localhost:9090';
       const backendHealthUrl = `${backendUrl}/health`;
       
       const backendStartTime = Date.now();

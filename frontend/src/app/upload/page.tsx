@@ -1,11 +1,10 @@
 'use client'
 
-import React, { useState, useCallback } from 'react'
+import React, { useState, useCallback, useEffect } from 'react'
 import { 
   Layout, 
   Typography, 
   Card, 
-  Upload, 
   Button, 
   Progress, 
   Alert, 
@@ -15,7 +14,7 @@ import {
   Divider,
   List,
   Tag,
-  message
+  App
 } from 'antd'
 import { 
   CloudUploadOutlined, 
@@ -23,12 +22,12 @@ import {
   CheckCircleOutlined,
   LoadingOutlined,
   ExclamationCircleOutlined,
-  InboxOutlined,
-  GlobalOutlined
+  GlobalOutlined,
+  UploadOutlined
 } from '@ant-design/icons'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import type { UploadProps, UploadFile } from 'antd/es/upload/interface'
+// Remove unused Upload-related imports
 import { ApiService, handleApiError, formatFileSize } from '@/lib/api'
 import type { UploadResponse } from '@/lib/api'
 import { ThemeToggle } from '../components/ThemeToggle'
@@ -37,22 +36,29 @@ import { AppHeader } from '@/components'
 
 const { Header, Content, Footer } = Layout
 const { Title, Paragraph, Text } = Typography
-const { Dragger } = Upload
 
 // UploadResponse interface is now imported from @/lib/api
 
 export default function UploadPage() {
   const router = useRouter()
   const { theme } = useTheme()
+  const { message } = App.useApp()
   const [uploading, setUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
   const [uploadedFiles, setUploadedFiles] = useState<UploadResponse[]>([])
   const [currentUpload, setCurrentUpload] = useState<string | null>(null)
 
   const handleUpload = useCallback(async (file: File): Promise<boolean> => {
+    console.log('handleUpload called with file:', file)
+    console.log('File name:', file.name)
+    console.log('File size:', file.size)
+    console.log('File type:', file.type)
+    
     // Validate file type
     const allowedTypes = ['.pcap', '.pcapng', '.cap']
     const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase()
+    console.log('File extension:', fileExtension)
+    console.log('Allowed types:', allowedTypes)
     
     if (!allowedTypes.includes(fileExtension)) {
       message.error({
@@ -90,7 +96,9 @@ export default function UploadPage() {
         })
       }, 200)
 
+      console.log('About to call ApiService.submitAnalysis')
       const result = await ApiService.submitAnalysis(file, 'comprehensive', 'normal')
+      console.log('ApiService.submitAnalysis result:', result)
 
       clearInterval(progressInterval)
       
@@ -111,80 +119,123 @@ export default function UploadPage() {
       return true
     } catch (error: any) {
       console.error('Upload error:', error)
+      console.error('Error details:', error.message, error.stack)
       message.error(handleApiError(error))
       return false
     } finally {
+      console.log('Upload finally block - cleaning up')
       setUploading(false)
       setCurrentUpload(null)
       setUploadProgress(0)
     }
   }, [router])
 
-  const uploadProps: UploadProps = {
-    name: 'file',
-    multiple: false,
-    accept: '.pcap,.pcapng,.cap',
-    beforeUpload: (file) => {
-      handleUpload(file)
-      return false // Prevent default upload behavior
-    },
-    onDrop(e) {
-      console.log('Dropped files', e.dataTransfer.files)
-    },
-    disabled: uploading,
-  }
+  // Removed unused functions and refs - using direct file input now
 
   const formatDate = (dateString: string): string => {
     return new Date(dateString).toLocaleString()
   }
 
   return (
-    <Layout className="min-h-screen flex flex-col" style={{ backgroundColor: '#f9fafb' }}>
+    <Layout className="min-h-screen" style={{ backgroundColor: '#f9fafb' }}>
       {/* Header */}
-      <AppHeader 
-        title="Upload PCAP File"
-        actions={
-          <Link href="/reports">
-            <Button 
-              type="default" 
-              icon={<FileTextOutlined />} 
-              className="h-8 px-4 text-sm"
-            >
-              <span className="hidden sm:inline">View Reports</span>
-            </Button>
-          </Link>
-        }
-      />
+      <div style={{ position: 'relative', zIndex: 1000 }}>
+        <AppHeader 
+          title="PCAP Reporter"
+        />
+      </div>
 
       {/* Main Content */}
-      <Content className="bg-gray-50 p-6">
+      <Content 
+        className="bg-gray-50 p-6" 
+        style={{ 
+          marginTop: '64px', // Space for header (matches header height)
+          paddingTop: '3rem',
+          position: 'relative',
+          zIndex: 1
+        }}
+      >
         <div className="max-w-4xl mx-auto">
-          
-          {/* Page Header */}
-          <div className="mb-8">
-            <Title level={2} className="mb-2 text-xl sm:text-2xl md:text-3xl">
-              Upload PCAP File
-            </Title>
-            <Paragraph className="text-gray-600 text-sm sm:text-base leading-relaxed">
-              Upload your PCAP files for comprehensive network analysis. 
-              Supported formats: .pcap, .pcapng, .cap (max 100MB)
-            </Paragraph>
-          </div>
 
           {/* Upload Area */}
-          <Card className="mb-6">
-            <Dragger {...uploadProps} className="mb-4">
-              <p className="ant-upload-drag-icon">
-                <InboxOutlined style={{ fontSize: '48px', color: '#1890ff' }} />
-              </p>
-              <p className="ant-upload-text">
-                Click or drag PCAP file to this area to upload
-              </p>
-              <p className="ant-upload-hint">
-                Support for .pcap, .pcapng, and .cap files up to 100MB.
-                Analysis will start automatically after upload.
-              </p>
-            </Dragger>
+          <Card className="mb-6" style={{ marginTop: '4rem' }}>
+            <div className="text-center py-16">
+              <div className="mb-6" style={{ marginTop: '3%' }}>
+                <Title level={2} className="text-gray-800 mb-4">
+                  Upload PCAP File
+                </Title>
+                <Paragraph className="text-gray-600 mb-8" style={{ fontSize: '16px' }}>
+                  Upload your PCAP files for comprehensive network analysis
+                </Paragraph>
+              </div>
+              
+              <div className="mb-10">
+                <UploadOutlined style={{ fontSize: '48px', color: '#1890ff' }} />
+              </div>
+              
+              <div className="mb-6 flex flex-row gap-4 items-center justify-center" style={{ marginTop: '2rem' }}>
+                <Button
+                  type="primary"
+                  size="large"
+                  icon={<UploadOutlined />}
+                  onClick={() => {
+                    console.log('Browse button clicked')
+                    document.getElementById('file-input')?.click()
+                  }}
+                  disabled={uploading}
+                  style={{ 
+                    padding: '12px 32px', 
+                    fontSize: '16px', 
+                    fontWeight: 'bold',
+                    height: '48px'
+                  }}
+                >
+                  {uploading ? 'Uploading...' : 'Browse for PCAP File'}
+                </Button>
+                
+                <Link href="/reports">
+                  <Button
+                    type="primary"
+                    size="large"
+                    icon={<FileTextOutlined />}
+                    style={{ 
+                      padding: '12px 32px', 
+                      fontSize: '16px', 
+                      fontWeight: 'bold',
+                      height: '48px',
+                      marginLeft: '20px'
+                    }}
+                  >
+                    View Reports
+                  </Button>
+                </Link>
+                
+                <input
+                  id="file-input"
+                  type="file"
+                  accept=".pcap,.pcapng,.cap"
+                  onChange={(e) => {
+                    console.log('File input onChange triggered')
+                    console.log('Event target:', e.target)
+                    console.log('Files:', e.target.files)
+                    const file = e.target.files?.[0]
+                    console.log('Selected file:', file)
+                    if (file) {
+                      console.log('Calling handleUpload with file:', file.name)
+                      handleUpload(file)
+                    } else {
+                      console.log('No file selected')
+                    }
+                  }}
+                  style={{ display: 'none' }}
+                />
+              </div>
+              
+              <div className="text-gray-600 text-sm">
+                <p>Support for .pcap, .pcapng, and .cap files up to 100MB.</p>
+                <p>Analysis will start automatically after upload.</p>
+              </div>
+            </div>
 
             {/* Upload Progress */}
             {uploading && (

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Button, Tooltip } from 'antd';
-import { SunOutlined, MoonOutlined } from '@ant-design/icons';
+import { BulbOutlined, BulbFilled } from '@ant-design/icons';
 
 type Theme = 'light' | 'dark';
 
@@ -64,7 +64,7 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({
         className={`text-white opacity-50 ${className}`}
         disabled
       >
-        <SunOutlined />
+        <BulbOutlined />
       </Button>
     );
   }
@@ -80,9 +80,9 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({
       aria-checked={theme === 'dark'}
     >
       {theme === 'light' ? (
-        <MoonOutlined className="transition-transform duration-300 hover:rotate-12" />
+        <BulbFilled className="transition-transform duration-300 hover:rotate-12" />
       ) : (
-        <SunOutlined className="transition-transform duration-300 hover:rotate-12" />
+        <BulbOutlined className="transition-transform duration-300 hover:rotate-12" />
       )}
     </Button>
   );

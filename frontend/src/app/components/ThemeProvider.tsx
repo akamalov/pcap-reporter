@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { ConfigProvider, theme } from 'antd';
+import { ConfigProvider, theme, App } from 'antd';
 import { AntdRegistry } from '@ant-design/nextjs-registry';
 
 type Theme = 'light' | 'dark';
@@ -82,9 +82,11 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     <ThemeContext.Provider value={{ theme: currentTheme, toggleTheme }}>
       <AntdRegistry>
         <ConfigProvider theme={antdTheme}>
-          <div className={currentTheme === 'dark' ? 'dark' : ''}>
-            {children}
-          </div>
+          <App>
+            <div className={currentTheme === 'dark' ? 'dark' : ''}>
+              {children}
+            </div>
+          </App>
         </ConfigProvider>
       </AntdRegistry>
     </ThemeContext.Provider>

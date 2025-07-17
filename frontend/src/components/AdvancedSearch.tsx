@@ -38,7 +38,7 @@ import {
   ClockCircleOutlined,
   SecurityScanOutlined,
   GlobalOutlined,
-  ExclamationTriangleOutlined
+  ExclamationCircleOutlined
 } from '@ant-design/icons';
 
 const { Title, Text } = Typography;
@@ -267,7 +267,7 @@ const AdvancedSearch: React.FC<AdvancedSearchProps> = ({ jobId, onResults }) => 
     <div style={{ padding: '16px 0' }}>
       <Collapse 
         activeKey={activeKey} 
-        onChange={setActiveKey}
+        onChange={(key) => setActiveKey(Array.isArray(key) ? key : [key])}
         ghost
       >
         <Panel 
@@ -430,7 +430,7 @@ const AdvancedSearch: React.FC<AdvancedSearchProps> = ({ jobId, onResults }) => 
                   <Col span={6}>
                     <Card size="small" title={<Space><SecurityScanOutlined style={{ color: '#f5222d' }} />Security Events</Space>}>
                       <Space direction="vertical" style={{ width: '100%' }}>
-                        <Button size="small" block icon={<ExclamationTriangleOutlined />}>
+                        <Button size="small" block icon={<ExclamationCircleOutlined />}>
                           Critical Threats
                         </Button>
                         <Button size="small" block>

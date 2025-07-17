@@ -1,46 +1,35 @@
 """
-Celery tasks for PCAP analysis processing.
+ROBUST Celery tasks for PCAP analysis processing.
+Uses the sync/async bridge for proper event loop management.
 """
 
 import logging
 import os
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Dict, Any
 
-from celery import current_task
-from celery.exceptions import Retry
-
 from core.celery_app import celery_app
-from core.database import init_db
-from models.report import Report, ReportStatus
-from models.analysis_job import AnalysisJob, JobStatus
-from services.pcap_analysis_service import PcapAnalysisService
-from services.streaming_pcap_service import StreamingPcapService, StreamingConfig
-from services.websocket_service import websocket_service
-from services.network_diagram_generator import NetworkDiagramGenerator
+from core.sync_async_bridge import celery_async_task, DatabaseContext, TaskStateManager
 
 logger = logging.getLogger(__name__)
 
-
-async def ensure_db_initialized():
-    """
-    Ensure database is initialized for Celery tasks.
-    """
-    try:
-        await init_db()
-        logger.info("Database initialized for Celery task")
-    except Exception as e:
-        logger.error(f"Failed to initialize database for Celery task: {e}")
-        raise
-
-
 @celery_app.task(bind=True, name="analyze_pcap_file")
-def analyze_pcap_file(self, report_id: str, file_path: str) -> Dict[str, Any]:
+@celery_async_task
+async def analyze_pcap_file(
+    self, 
+    db_context: DatabaseContext, 
+    state_manager: TaskStateManager,
+    report_id: str, 
+    file_path: str
+) -> Dict[str, Any]:
     """
     Analyze a PCAP file and update the report with results.
-    Enhanced with streaming support for large files.
+    ROBUST version using sync/async bridge.
     
     Args:
+        self: Celery task instance
+        db_context: Database context manager
+        state_manager: Task state manager
         report_id: ID of the report to update
         file_path: Path to the PCAP file to analyze
         
@@ -50,556 +39,272 @@ def analyze_pcap_file(self, report_id: str, file_path: str) -> Dict[str, Any]:
     task_id = self.request.id
     logger.info(f"Starting PCAP analysis task {task_id} for report {report_id}")
     
-    async def run_analysis():
-        try:
-            # Initialize database connection
-            await ensure_db_initialized()
-            
-            # Get the report
-            report = await Report.get(report_id)
-            if not report:
-                raise ValueError(f"Report not found: {report_id}")
-            
-            # Update report status
-            report.status = ReportStatus.PROCESSING
-            report.started_at = datetime.utcnow()
-            await report.save()
-            
-            # Create or update analysis job
-            analysis_job = await AnalysisJob.find_one({"job_id": task_id})
-            if not analysis_job:
-                analysis_job = AnalysisJob(
-                    job_id=task_id,
-                    report_id=report_id,
-                    status=JobStatus.STARTED,
-                    progress=0,
-                    current_step="Starting analysis..."
-                )
-                await analysis_job.save()
-            
-            # Progress callback to update job status
-            async def progress_callback(progress: int, message: str):
-                analysis_job.progress = progress
-                analysis_job.current_step = message
-                analysis_job.updated_at = datetime.utcnow()
-                await analysis_job.save()
-                
-                # Update Celery task state
-                self.update_state(
-                    state="PROGRESS",
-                    meta={
-                        "progress": progress,
-                        "message": message,
-                        "report_id": report_id
-                    }
-                )
-                
-                # Send real-time WebSocket update
-                try:
-                    await websocket_service.send_progress_update(
-                        job_id=task_id,
-                        progress=progress,
-                        message=message,
-                        status="processing",
-                        details={
-                            "report_id": report_id,
-                            "file_size_mb": file_size_mb if 'file_size_mb' in locals() else 0
-                        }
-                    )
-                except Exception as ws_error:
-                    logger.warning(f"Failed to send WebSocket update: {ws_error}")
-            
-            # Determine file size and choose appropriate service
-            file_size = os.path.getsize(file_path)
-            file_size_mb = file_size / (1024 * 1024)
-            
-            await progress_callback(10, "Initializing analysis...")
-            
-            # Use streaming service for large files (>100MB)
-            if file_size_mb > 100:
-                logger.info(f"Using streaming analysis for large file: {file_size_mb:.1f}MB")
-                
-                # Configure streaming service based on file size
-                config = StreamingConfig(
-                    chunk_size_mb=min(100, max(50, int(file_size_mb / 8))),  # Adaptive chunk size
-                    parallel_workers=min(4, max(2, int(file_size_mb / 200))),  # Scale workers with file size
-                    max_memory_mb=512,
-                    enable_progress_updates=True
-                )
-                
-                streaming_service = StreamingPcapService(config)
-                analysis_results = await streaming_service.analyze_large_pcap(
-                    file_path, 
-                    progress_callback
-                )
-                
-                # Get streaming statistics
-                streaming_stats = streaming_service.get_processing_stats()
-                logger.info(f"Streaming analysis completed: {streaming_stats}")
-                
-            else:
-                # Use regular analysis service for smaller files
-                logger.info(f"Using regular analysis for file: {file_size_mb:.1f}MB")
-                analysis_service = PcapAnalysisService()
-                
-                await progress_callback(25, "Extracting basic statistics...")
-                analysis_results = await analysis_service.analyze_pcap_file(
-                    file_path, 
-                    options=getattr(analysis_job, 'options', {})
-                )
-            
-            await progress_callback(85, "Generating network diagrams...")
-            
-            # Generate network diagrams from analysis results
-            try:
-                diagram_generator = NetworkDiagramGenerator()
-                
-                # Create diagram input from analysis results
-                diagram_input = {
-                    'conversations': [],
-                    'top_talkers': [],
-                    'security_analysis': {'security_alerts': []},
-                    'performance_analysis': {'performance_issues': []}
-                }
-                
-                # Extract conversation data if available
-                if hasattr(analysis_results, 'top_conversations') and analysis_results.top_conversations:
-                    diagram_input['conversations'] = [
-                        {
-                            'src_ip': conv.src_ip,
-                            'dst_ip': conv.dst_ip,
-                            'src_port': conv.src_port,
-                            'dst_port': conv.dst_port,
-                            'protocol': conv.protocol,
-                            'packet_count': conv.packets_sent + conv.packets_received,
-                            'byte_count': conv.bytes_sent + conv.bytes_received
-                        }
-                        for conv in analysis_results.top_conversations[:50]  # Limit for performance
-                    ]
-                
-                # Extract security issues
-                if hasattr(analysis_results, 'issues') and analysis_results.issues:
-                    security_alerts = []
-                    for issue in analysis_results.issues:
-                        if hasattr(issue, 'type') and 'security' in issue.type.value.lower():
-                            security_alerts.append({
-                                'type': issue.type.value,
-                                'description': issue.description,
-                                'severity': issue.severity.value.upper(),
-                                'affected_hosts': getattr(issue, 'affected_hosts', [])
-                            })
-                    diagram_input['security_analysis']['security_alerts'] = security_alerts
-                
-                # Extract performance issues
-                performance_issues = []
-                if hasattr(analysis_results, 'issues') and analysis_results.issues:
-                    for issue in analysis_results.issues:
-                        if hasattr(issue, 'type') and 'performance' in issue.type.value.lower():
-                            performance_issues.append({
-                                'type': issue.type.value,
-                                'description': issue.description,
-                                'severity': issue.severity.value.upper()
-                            })
-                
-                # Add bandwidth and connection rate from performance metrics
-                if hasattr(analysis_results, 'performance_metrics'):
-                    perf_metrics = analysis_results.performance_metrics
-                    diagram_input['performance_analysis'].update({
-                        'bandwidth_usage': int(analysis_results.traffic_stats.bytes_per_second * analysis_results.traffic_stats.duration) if hasattr(analysis_results, 'traffic_stats') else 0,
-                        'connection_rate': len(diagram_input['conversations']),
-                        'latency_indicators': int(perf_metrics.avg_latency * 1000) if perf_metrics.avg_latency else 0,
-                        'performance_issues': performance_issues
-                    })
-                
-                # Generate comprehensive diagram set
-                diagrams = diagram_generator.generate_comprehensive_diagram_set(diagram_input)
-                
-                logger.info(f"Generated {len([k for k in diagrams.keys() if not k.startswith('_')])} network diagrams")
-                
-            except Exception as diagram_error:
-                logger.warning(f"Failed to generate diagrams: {diagram_error}")
-                diagrams = {
-                    'error': f"Diagram generation failed: {str(diagram_error)}",
-                    '_metadata': {'error': str(diagram_error)}
-                }
-            
-            await progress_callback(90, "Finalizing results...")
-            
-            # Convert AnalysisResults to the format expected by the Report model
-            results_dict = {
-                "file_path": analysis_results.file_path,
-                "file_size": analysis_results.file_size,
-                "analysis_timestamp": analysis_results.analysis_timestamp,
-                "traffic_stats": {
-                    "total_packets": analysis_results.traffic_stats.total_packets,
-                    "total_bytes": analysis_results.traffic_stats.total_bytes,
-                    "duration": analysis_results.traffic_stats.duration,
-                    "avg_packet_size": analysis_results.traffic_stats.avg_packet_size,
-                    "packets_per_second": analysis_results.traffic_stats.packets_per_second,
-                    "bytes_per_second": analysis_results.traffic_stats.bytes_per_second
-                },
-                "performance_metrics": {
-                    "avg_latency": analysis_results.performance_metrics.avg_latency,
-                    "max_latency": analysis_results.performance_metrics.max_latency,
-                    "packet_loss_rate": analysis_results.performance_metrics.packet_loss_rate,
-                    "throughput_mbps": analysis_results.performance_metrics.throughput_mbps
-                },
-                "protocol_stats": {
-                    "tcp_packets": analysis_results.protocol_stats.tcp_packets,
-                    "udp_packets": analysis_results.protocol_stats.udp_packets,
-                    "icmp_packets": analysis_results.protocol_stats.icmp_packets,
-                    "http_sessions": analysis_results.protocol_stats.http_sessions,
-                    "https_sessions": analysis_results.protocol_stats.https_sessions,
-                    "dns_queries": analysis_results.protocol_stats.dns_queries
-                },
-                "issues": [
-                    {
-                        "type": issue.type.value,
-                        "severity": issue.severity.value,
-                        "description": issue.description,
-                        "recommendation": issue.recommendation,
-                        "confidence": issue.confidence
-                    }
-                    for issue in analysis_results.issues
-                ],
-                "start_time": analysis_results.start_time,
-                "end_time": analysis_results.end_time,
-                "processing_time": analysis_results.processing_time,
-                "analysis_options": analysis_results.analysis_options,
-                "network_diagrams": diagrams  # Add generated diagrams
-            }
-            
-            # Update report with results
-            report.analysis_results = results_dict
-            report.status = ReportStatus.COMPLETED
-            report.completed_at = datetime.utcnow()
-            await report.save()
-            
-            # Update analysis job
-            analysis_job.status = JobStatus.SUCCESS
-            analysis_job.progress = 100
-            analysis_job.current_step = "Analysis completed successfully"
-            analysis_job.completed_at = datetime.utcnow()
-            await analysis_job.save()
-            
-            logger.info(f"PCAP analysis completed for report {report_id}")
-            
-            return {
-                "status": "completed",
-                "report_id": report_id,
-                "task_id": task_id,
-                "message": "Analysis completed successfully",
-                "results_summary": {
-                    "total_packets": analysis_results.traffic_stats.total_packets,
-                    "duration": analysis_results.traffic_stats.duration,
-                    "unique_protocols": len([p for p in [
-                        analysis_results.protocol_stats.tcp_packets,
-                        analysis_results.protocol_stats.udp_packets,
-                        analysis_results.protocol_stats.icmp_packets
-                    ] if p > 0]),
-                    "issues_found": len(analysis_results.issues),
-                    "throughput_mbps": analysis_results.performance_metrics.throughput_mbps,
-                    "file_size_mb": file_size_mb,
-                    "processing_method": "streaming" if file_size_mb > 100 else "regular"
-                }
-            }
-            
-        except Exception as e:
-            logger.error(f"Error in PCAP analysis task {task_id}: {e}")
-            
-            # Update report status
-            try:
-                await ensure_db_initialized()
-                report = await Report.get(report_id)
-                if report:
-                    report.status = ReportStatus.FAILED
-                    report.error_message = str(e)
-                    await report.save()
-            except Exception as save_error:
-                logger.error(f"Failed to update report status: {save_error}")
-            
-            # Update analysis job
-            try:
-                analysis_job = await AnalysisJob.find_one({"job_id": task_id})
-                if analysis_job:
-                    analysis_job.status = JobStatus.FAILURE
-                    analysis_job.error_message = str(e)
-                    analysis_job.updated_at = datetime.utcnow()
-                    await analysis_job.save()
-            except Exception as save_error:
-                logger.error(f"Failed to update analysis job: {save_error}")
-            
-            # Update Celery task state
-            self.update_state(
-                state="FAILURE",
-                meta={
-                    "error": str(e),
-                    "report_id": report_id,
-                    "task_id": task_id
-                }
-            )
-            
-            raise
+    # Import models in async context
+    from models.report import Report, ReportStatus
+    from models.analysis_job import AnalysisJob, JobStatus
+    from services.pcap_analysis_service import PcapAnalysisService
+    from services.network_diagram_generator import NetworkDiagramGenerator
     
-    # Run the async analysis
-    import asyncio
+    # Get the report
+    report = await Report.get(report_id)
+    if not report:
+        raise ValueError(f"Report not found: {report_id}")
+    
+    # Update report status
+    report.status = ReportStatus.PROCESSING
+    report.started_at = datetime.utcnow()
+    await report.save()
+    
+    logger.info(f"Updated report {report_id} status to PROCESSING")
+    state_manager.update_progress(10, "Report status updated to PROCESSING")
+    
+    # Create analysis job
+    analysis_job = AnalysisJob(
+        job_id=report.job_id,  # Use report's job_id for consistency
+        report_id=report_id,
+        status=JobStatus.STARTED,
+        progress=0,
+        current_step="Starting analysis...",
+        celery_task_id=task_id
+    )
+    await analysis_job.save()
+    
+    logger.info(f"Created analysis job for task {task_id}")
+    state_manager.update_progress(20, "Analysis job created")
+    
+    # Update analysis job progress
+    analysis_job.progress = 25
+    analysis_job.current_step = "Initializing analysis..."
+    await analysis_job.save()
+    
+    # Get file information
+    file_size = os.path.getsize(file_path)
+    file_size_mb = file_size / (1024 * 1024)
+    
+    logger.info(f"Analyzing file {file_path} ({file_size_mb:.1f}MB)")
+    state_manager.update_progress(30, f"Analyzing file ({file_size_mb:.1f}MB)")
+    
+    # Update analysis job progress
+    analysis_job.progress = 40
+    analysis_job.current_step = "Analyzing PCAP file..."
+    await analysis_job.save()
+    
+    # Use analysis service
+    analysis_service = PcapAnalysisService()
+    analysis_results = await analysis_service.analyze_pcap_file(file_path)
+    
+    logger.info(f"Analysis completed: {analysis_results.traffic_stats.total_packets} packets analyzed")
+    state_manager.update_progress(70, f"Analysis completed: {analysis_results.traffic_stats.total_packets} packets")
+    
+    # Update analysis job progress
+    analysis_job.progress = 80
+    analysis_job.current_step = "Generating network diagrams..."
+    await analysis_job.save()
+    
+    # Generate network diagrams
+    diagrams = {}
     try:
-        return asyncio.run(run_analysis())
-    except Exception as e:
-        logger.error(f"Failed to run analysis task: {e}")
-        raise
+        diagram_generator = NetworkDiagramGenerator()
+        
+        # Create basic diagram input
+        diagram_input = {
+            'conversations': [],
+            'top_talkers': [],
+            'security_analysis': {'security_alerts': []},
+            'performance_analysis': {'performance_issues': []}
+        }
+        
+        # Extract conversation data if available
+        if hasattr(analysis_results, 'top_conversations') and analysis_results.top_conversations:
+            diagram_input['conversations'] = [
+                {
+                    'src_ip': conv.src_ip,
+                    'dst_ip': conv.dst_ip,
+                    'src_port': conv.src_port,
+                    'dst_port': conv.dst_port,
+                    'protocol': conv.protocol,
+                    'packet_count': conv.packets_sent + conv.packets_received,
+                    'byte_count': conv.bytes_sent + conv.bytes_received
+                }
+                for conv in analysis_results.top_conversations[:50]
+            ]
+        
+        # Generate diagrams
+        diagrams = diagram_generator.generate_comprehensive_diagram_set(diagram_input)
+        logger.info(f"Generated {len([k for k in diagrams.keys() if not k.startswith('_')])} network diagrams")
+        
+    except Exception as diagram_error:
+        logger.warning(f"Failed to generate diagrams: {diagram_error}")
+        diagrams = {
+            'error': f"Diagram generation failed: {str(diagram_error)}",
+            '_metadata': {'error': str(diagram_error)}
+        }
+    
+    state_manager.update_progress(85, "Network diagrams generated")
+    
+    # Update analysis job progress
+    analysis_job.progress = 90
+    analysis_job.current_step = "Finalizing results..."
+    await analysis_job.save()
+    
+    # Convert results to dictionary
+    results_dict = {
+        "file_path": analysis_results.file_path,
+        "file_size": analysis_results.file_size,
+        "analysis_timestamp": analysis_results.analysis_timestamp,
+        "traffic_stats": {
+            "total_packets": analysis_results.traffic_stats.total_packets,
+            "total_bytes": analysis_results.traffic_stats.total_bytes,
+            "duration": analysis_results.traffic_stats.duration,
+            "avg_packet_size": analysis_results.traffic_stats.avg_packet_size,
+            "packets_per_second": analysis_results.traffic_stats.packets_per_second,
+            "bytes_per_second": analysis_results.traffic_stats.bytes_per_second
+        },
+        "performance_metrics": {
+            "avg_latency": analysis_results.performance_metrics.avg_latency,
+            "max_latency": analysis_results.performance_metrics.max_latency,
+            "packet_loss_rate": analysis_results.performance_metrics.packet_loss_rate,
+            "throughput_mbps": analysis_results.performance_metrics.throughput_mbps
+        },
+        "protocol_stats": {
+            "tcp_packets": analysis_results.protocol_stats.tcp_packets,
+            "udp_packets": analysis_results.protocol_stats.udp_packets,
+            "icmp_packets": analysis_results.protocol_stats.icmp_packets,
+            "http_sessions": analysis_results.protocol_stats.http_sessions,
+            "https_sessions": analysis_results.protocol_stats.https_sessions,
+            "dns_queries": analysis_results.protocol_stats.dns_queries
+        },
+        "issues": [
+            {
+                "type": issue.type.value,
+                "severity": issue.severity.value,
+                "description": issue.description,
+                "recommendation": issue.recommendation,
+                "confidence": issue.confidence
+            }
+            for issue in analysis_results.issues
+        ],
+        "start_time": analysis_results.start_time,
+        "end_time": analysis_results.end_time,
+        "processing_time": analysis_results.processing_time,
+        "analysis_options": analysis_results.analysis_options,
+        "network_diagrams": diagrams
+    }
+    
+    # Update report with results
+    report.analysis_results = results_dict
+    report.status = ReportStatus.COMPLETED
+    report.completed_at = datetime.utcnow()
+    await report.save()
+    
+    # Update analysis job
+    analysis_job.status = JobStatus.SUCCESS
+    analysis_job.progress = 100
+    analysis_job.current_step = "Analysis completed successfully"
+    analysis_job.completed_at = datetime.utcnow()
+    await analysis_job.save()
+    
+    logger.info(f"PCAP analysis completed successfully for report {report_id}")
+    state_manager.update_progress(100, "Analysis completed successfully")
+    
+    return {
+        "status": "completed",
+        "report_id": report_id,
+        "task_id": task_id,
+        "message": "Analysis completed successfully",
+        "results_summary": {
+            "total_packets": analysis_results.traffic_stats.total_packets,
+            "duration": analysis_results.traffic_stats.duration,
+            "issues_found": len(analysis_results.issues),
+            "throughput_mbps": analysis_results.performance_metrics.throughput_mbps,
+            "file_size_mb": file_size_mb
+        }
+    }
 
 
 @celery_app.task(bind=True, name="cleanup_old_reports")
-def cleanup_old_reports(self, days_old: int = 30) -> Dict[str, Any]:
+@celery_async_task
+async def cleanup_old_reports(
+    self, 
+    db_context: DatabaseContext, 
+    state_manager: TaskStateManager,
+    days_old: int = 30
+) -> Dict[str, Any]:
     """
     Clean up old reports and associated files.
-    
-    Args:
-        days_old: Number of days after which reports should be cleaned up
-        
-    Returns:
-        Dict containing cleanup results
+    ROBUST version using sync/async bridge.
     """
     task_id = self.request.id
     logger.info(f"Starting cleanup task {task_id} for reports older than {days_old} days")
     
-    async def run_cleanup():
+    from datetime import timedelta
+    from models.report import Report
+    from models.analysis_job import AnalysisJob
+    
+    cutoff_date = datetime.utcnow() - timedelta(days=days_old)
+    
+    # Find old reports
+    old_reports = await Report.find(
+        {"created_at": {"$lt": cutoff_date}}
+    ).to_list()
+    
+    cleaned_count = 0
+    errors = []
+    
+    for i, report in enumerate(old_reports):
         try:
-            # Initialize database connection
-            await ensure_db_initialized()
+            # Clean up associated files
+            if report.file_path and os.path.exists(report.file_path):
+                os.remove(report.file_path)
+                logger.info(f"Deleted file: {report.file_path}")
             
-            cutoff_date = datetime.utcnow() - timedelta(days=days_old)
+            # Delete associated analysis jobs
+            if report.job_id:
+                analysis_job = await AnalysisJob.find_one({"job_id": report.job_id})
+                if analysis_job:
+                    await analysis_job.delete()
             
-            # Find old reports
-            old_reports = await Report.find(
-                {"created_at": {"$lt": cutoff_date}}
-            ).to_list()
+            # Delete the report
+            await report.delete()
+            cleaned_count += 1
             
-            cleaned_count = 0
-            errors = []
+            # Update progress
+            progress = int((i + 1) / len(old_reports) * 100)
+            state_manager.update_progress(progress, f"Cleaned {cleaned_count} reports")
             
-            for report in old_reports:
-                try:
-                    # Clean up associated files
-                    if report.file_path and os.path.exists(report.file_path):
-                        os.remove(report.file_path)
-                        logger.info(f"Deleted file: {report.file_path}")
-                    
-                    # Delete associated analysis jobs
-                    if report.job_id:
-                        analysis_job = await AnalysisJob.find_one({"job_id": report.job_id})
-                        if analysis_job:
-                            await analysis_job.delete()
-                    
-                    # Delete the report
-                    await report.delete()
-                    cleaned_count += 1
-                    
-                    logger.info(f"Cleaned up report: {report.id}")
-                    
-                except Exception as e:
-                    error_msg = f"Error cleaning up report {report.id}: {e}"
-                    logger.error(error_msg)
-                    errors.append(error_msg)
-            
-            logger.info(f"Cleanup task {task_id} completed: {cleaned_count} reports cleaned")
-            
-            return {
-                "status": "completed",
-                "task_id": task_id,
-                "cleaned_count": cleaned_count,
-                "errors": errors
-            }
+            logger.info(f"Cleaned up report: {report.id}")
             
         except Exception as e:
-            logger.error(f"Error in cleanup task {task_id}: {e}")
-            self.update_state(
-                state="FAILURE",
-                meta={"error": str(e), "task_id": task_id}
-            )
-            raise
+            error_msg = f"Error cleaning up report {report.id}: {e}"
+            logger.error(error_msg)
+            errors.append(error_msg)
     
-    # Run the async cleanup
-    import asyncio
-    try:
-        return asyncio.run(run_cleanup())
-    except Exception as e:
-        logger.error(f"Failed to run cleanup task: {e}")
-        raise
+    logger.info(f"Cleanup task {task_id} completed: {cleaned_count} reports cleaned")
+    
+    return {
+        "status": "completed",
+        "task_id": task_id,
+        "cleaned_count": cleaned_count,
+        "errors": errors
+    }
 
 
-@celery_app.task(bind=True, name="validate_pcap_file")
-def validate_pcap_file(self, file_path: str) -> Dict[str, Any]:
+@celery_app.task(bind=True, name="debug_task")
+def debug_task(self):
     """
-    Validate a PCAP file before analysis.
-    
-    Args:
-        file_path: Path to the PCAP file to validate
-        
-    Returns:
-        Dict containing validation results
+    Debug task for testing Celery functionality.
+    Simple synchronous task for basic testing.
     """
     task_id = self.request.id
-    logger.info(f"Starting PCAP validation task {task_id} for file {file_path}")
+    logger.info(f"Debug task {task_id} starting")
     
-    async def run_validation():
-        try:
-            # Initialize database connection
-            await ensure_db_initialized()
-            
-            # Initialize the analysis service for validation
-            analysis_service = PcapAnalysisService()
-            
-            # Validate the file
-            await analysis_service._validate_pcap_file(file_path)
-            
-            # Get basic file information
-            import os
-            from pathlib import Path
-            
-            file_info = Path(file_path)
-            file_size = file_info.stat().st_size
-            
-            logger.info(f"PCAP validation completed for file {file_path}")
-            
-            return {
-                "status": "valid",
-                "task_id": task_id,
-                "file_path": file_path,
-                "file_size": file_size,
-                "message": "File validation successful"
-            }
-            
-        except Exception as e:
-            logger.error(f"Error in PCAP validation task {task_id}: {e}")
-            
-            self.update_state(
-                state="FAILURE",
-                meta={
-                    "error": str(e),
-                    "file_path": file_path,
-                    "task_id": task_id
-                }
-            )
-            
-            return {
-                "status": "invalid",
-                "task_id": task_id,
-                "file_path": file_path,
-                "error": str(e),
-                "message": "File validation failed"
-            }
+    # Simple synchronous operations
+    import time
+    time.sleep(2)
     
-    # Run the async validation
-    import asyncio
-    try:
-        return asyncio.run(run_validation())
-    except Exception as e:
-        logger.error(f"Failed to run validation task: {e}")
-        raise
-
-
-@celery_app.task(bind=True, name="generate_report_summary")
-def generate_report_summary(self, report_id: str) -> Dict[str, Any]:
-    """
-    Generate a summary for a completed analysis report.
-    
-    Args:
-        report_id: ID of the report to summarize
-        
-    Returns:
-        Dict containing summary information
-    """
-    task_id = self.request.id
-    logger.info(f"Starting report summary generation task {task_id} for report {report_id}")
-    
-    async def run_summary():
-        try:
-            # Initialize database connection
-            await ensure_db_initialized()
-            
-            # Get the report
-            report = await Report.get(report_id)
-            if not report:
-                raise ValueError(f"Report not found: {report_id}")
-            
-            if not report.analysis_results:
-                raise ValueError(f"Report {report_id} has no analysis results")
-            
-            # Extract key metrics from analysis results
-            results = report.analysis_results
-            traffic_stats = results.get("traffic_stats", {})
-            performance_metrics = results.get("performance_metrics", {})
-            protocol_stats = results.get("protocol_stats", {})
-            issues = results.get("issues", [])
-            
-            # Generate summary
-            summary = {
-                "report_id": report_id,
-                "file_info": {
-                    "file_path": results.get("file_path", ""),
-                    "file_size": results.get("file_size", 0),
-                    "analysis_date": results.get("analysis_timestamp", "")
-                },
-                "traffic_overview": {
-                    "total_packets": traffic_stats.get("total_packets", 0),
-                    "total_bytes": traffic_stats.get("total_bytes", 0),
-                    "duration_seconds": traffic_stats.get("duration", 0),
-                    "avg_packet_size": traffic_stats.get("avg_packet_size", 0),
-                    "throughput_mbps": performance_metrics.get("throughput_mbps", 0)
-                },
-                "protocol_distribution": protocol_stats,
-                "performance_summary": {
-                    "avg_latency_ms": performance_metrics.get("avg_latency", 0) * 1000,
-                    "packet_loss_rate": performance_metrics.get("packet_loss_rate", 0),
-                    "quality_score": max(0, 100 - (performance_metrics.get("packet_loss_rate", 0) * 100))
-                },
-                "issues_summary": {
-                    "total_issues": len(issues),
-                    "critical_issues": len([i for i in issues if i.get("severity") == "critical"]),
-                    "high_issues": len([i for i in issues if i.get("severity") == "high"]),
-                    "medium_issues": len([i for i in issues if i.get("severity") == "medium"]),
-                    "low_issues": len([i for i in issues if i.get("severity") == "low"])
-                },
-                "recommendations": [
-                    issue.get("recommendation", "")
-                    for issue in issues
-                    if issue.get("recommendation") and issue.get("severity") in ["critical", "high"]
-                ][:5]  # Top 5 recommendations
-            }
-            
-            # Update report with summary
-            report.summary = summary
-            await report.save()
-            
-            logger.info(f"Report summary generated for report {report_id}")
-            
-            return {
-                "status": "completed",
-                "task_id": task_id,
-                "report_id": report_id,
-                "summary": summary
-            }
-            
-        except Exception as e:
-            logger.error(f"Error in report summary task {task_id}: {e}")
-            
-            self.update_state(
-                state="FAILURE",
-                meta={
-                    "error": str(e),
-                    "report_id": report_id,
-                    "task_id": task_id
-                }
-            )
-            
-            raise
-    
-    # Run the async summary generation
-    import asyncio
-    try:
-        return asyncio.run(run_summary())
-    except Exception as e:
-        logger.error(f"Failed to run summary task: {e}")
-        raise 
+    logger.info(f"Debug task {task_id} completed")
+    return {
+        "status": "success", 
+        "task_id": task_id,
+        "message": "Debug task completed"
+    }

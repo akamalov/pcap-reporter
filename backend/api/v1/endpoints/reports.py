@@ -17,14 +17,71 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
+async def get_report_by_id(report_id: str) -> Optional[Report]:
+    """
+    Helper function to get a report by job_id (UUID string) or MongoDB _id.
+    """
+    try:
+        print(f"🔥 Searching for report with job_id: {report_id}")
+        # Try to find by job_id first (UUID string)
+        report = await Report.find_one({"job_id": report_id})
+        print(f"🔥 Found report by job_id: {report is not None}")
+        
+        # If not found by job_id, try by MongoDB _id (for backward compatibility)
+        if not report:
+            try:
+                from bson import ObjectId
+                if ObjectId.is_valid(report_id):
+                    print(f"🔥 Trying to find by ObjectId: {report_id}")
+                    report = await Report.get(report_id)
+                    print(f"🔥 Found report by ObjectId: {report is not None}")
+            except Exception as e:
+                print(f"🔥 Error finding by ObjectId: {e}")
+                pass
+        
+        return report
+    except Exception as e:
+        print(f"🔥 Error in get_report_by_id: {e}")
+        raise
+
+
+
+@router.get("/by-job-id/{job_id}")
+async def get_report_by_job_id(job_id: str) -> Dict[str, Any]:
+    """
+    Get a specific report by job ID (UUID).
+    This endpoint is specifically for job ID lookups to avoid path validation issues.
+    """
+    try:
+        # Only search by job_id, not by MongoDB ObjectId
+        report = await Report.find_one({"job_id": job_id})
+        if not report:
+            raise HTTPException(
+                status_code=404,
+                detail="Report not found"
+            )
+        
+        return report.to_dict()
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting report by job_id {job_id}: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to get report: {str(e)}"
+        )
+
+
 @router.get("/{report_id}")
 async def get_report(report_id: str) -> Dict[str, Any]:
     """
-    Get a specific report by ID.
+    Get a specific report by MongoDB ObjectId.
     This endpoint implements the get_analysis_report MCP tool functionality.
     """
+    print(f"🔥 get_report called with report_id: {report_id}")
     try:
-        report = await Report.get(report_id)
+        report = await get_report_by_id(report_id)
         if not report:
             raise HTTPException(
                 status_code=404,
@@ -49,7 +106,7 @@ async def get_report_results(report_id: str) -> Dict[str, Any]:
     Get the analysis results for a specific report.
     """
     try:
-        report = await Report.get(report_id)
+        report = await get_report_by_id(report_id)
         if not report:
             raise HTTPException(
                 status_code=404,
@@ -141,7 +198,7 @@ async def delete_report(report_id: str) -> Dict[str, Any]:
     Delete a report and its associated data.
     """
     try:
-        report = await Report.get(report_id)
+        report = await get_report_by_id(report_id)
         if not report:
             raise HTTPException(
                 status_code=404,
@@ -183,7 +240,7 @@ async def get_report_summary(report_id: str) -> Dict[str, Any]:
     Get a summary of the report without full analysis results.
     """
     try:
-        report = await Report.get(report_id)
+        report = await get_report_by_id(report_id)
         if not report:
             raise HTTPException(
                 status_code=404,
@@ -231,7 +288,7 @@ async def download_report_pdf(report_id: str) -> StreamingResponse:
     """
     try:
         # Get the report
-        report = await Report.get(report_id)
+        report = await get_report_by_id(report_id)
         if not report:
             raise HTTPException(
                 status_code=404,

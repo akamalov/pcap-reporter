@@ -26,7 +26,7 @@ class AnalysisJob(Document):
     """
     
     # Job identification
-    job_id: str  # Our custom job ID
+    job_id: Indexed(str, unique=True)  # Our custom job ID
     celery_task_id: Optional[str] = None  # Celery task ID
     report_id: PydanticObjectId  # Reference to the report
     
@@ -37,6 +37,7 @@ class AnalysisJob(Document):
     # Status and timing
     status: JobStatus = JobStatus.PENDING
     created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
     started_at: Optional[datetime] = None
     completed_at: Optional[datetime] = None
     
@@ -61,7 +62,6 @@ class AnalysisJob(Document):
     class Settings:
         name = "analysis_jobs"
         indexes = [
-            [("job_id", 1)],  # Unique index on job_id
             [("report_id", 1)],
             [("status", 1)],
             [("created_at", -1)],
@@ -134,6 +134,7 @@ class AnalysisJob(Document):
             "current_step": self.current_step,
             "total_steps": self.total_steps,
             "created_at": self.created_at.isoformat(),
+            "updated_at": self.updated_at.isoformat(),
             "started_at": self.started_at.isoformat() if self.started_at else None,
             "completed_at": self.completed_at.isoformat() if self.completed_at else None,
             "execution_time": self.get_execution_time(),

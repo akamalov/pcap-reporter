@@ -1,6 +1,6 @@
-@tailwind base;
+/* @tailwind base;
 @tailwind components;
-@tailwind utilities;
+@tailwind utilities; */
 
 :root {
   --foreground-rgb: 0, 0, 0;
@@ -439,7 +439,11 @@ section {
 
 /* Enhanced button styles */
 .btn-primary {
-  @apply h-10 px-4 text-sm font-medium rounded-lg;
+  height: 40px;
+  padding: 0 16px;
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: 8px;
   box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   transition: all 0.2s ease;
 }
@@ -450,7 +454,10 @@ section {
 }
 
 .btn-secondary {
-  @apply h-8 px-3 text-sm rounded-lg;
+  height: 32px;
+  padding: 0 12px;
+  font-size: 14px;
+  border-radius: 8px;
 }
 
 /* Loading animations */

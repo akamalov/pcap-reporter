@@ -387,7 +387,7 @@ export default function ReportsPage() {
                   value={stats.completed_reports}
                   prefix={<CheckCircleOutlined />}
                   valueStyle={{ color: '#3f8600' }}
-                />
+                / 
               </Card>
             </Col>
             <Col xs={24} sm={12} md={6}>

@@ -1,7 +1,10 @@
 import axios, { AxiosResponse, AxiosError } from 'axios'
 
 // API Configuration
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || process.env.REACT_APP_API_URL || 'http://localhost:9090'
+console.log('🔥 API_BASE_URL:', API_BASE_URL)
+console.log('🔥 NEXT_PUBLIC_API_URL:', process.env.NEXT_PUBLIC_API_URL)
+console.log('🔥 REACT_APP_API_URL:', process.env.REACT_APP_API_URL)
 
 // Create axios instance with default configuration
 const apiClient = axios.create({
@@ -261,13 +264,13 @@ export class ApiService {
 
   // Get specific report by ID (equivalent to getAnalysisResult)
   static async getAnalysisResult(jobId: string): Promise<AnalysisResult> {
-    const response = await apiClient.get(`/api/v1/reports/${jobId}`)
+    const response = await apiClient.get(`/api/v1/reports/by-job-id/${jobId}`)
     return response.data
   }
 
   // Get report status (uses same endpoint as getAnalysisResult)
   static async getAnalysisStatus(jobId: string): Promise<AnalysisJob> {
-    const response = await apiClient.get(`/api/v1/reports/${jobId}`)
+    const response = await apiClient.get(`/api/v1/reports/by-job-id/${jobId}`)
     const report = response.data
     return {
       job_id: report.job_id,
@@ -370,13 +373,27 @@ export const getSeverityColor = (severity: string): string => {
 
 // Error handling utility
 export const handleApiError = (error: any): string => {
-  if (error.response?.data?.detail?.error) {
+  console.log('🔥 handleApiError called with:', error)
+  console.log('🔥 error.response?.data:', error.response?.data)
+  
+  // Check for detailed validation errors first
+  if (error.response?.data?.detail?.detail) {
+    console.log('🔥 Using detail.detail:', error.response.data.detail.detail)
+    return error.response.data.detail.detail
+  } else if (error.response?.data?.detail?.error) {
+    console.log('🔥 Using detail.error:', error.response.data.detail.error)
     return error.response.data.detail.error
+  } else if (error.response?.data?.detail) {
+    console.log('🔥 Using detail:', error.response.data.detail)
+    return error.response.data.detail
   } else if (error.response?.data?.message) {
+    console.log('🔥 Using message:', error.response.data.message)
     return error.response.data.message
   } else if (error.message) {
+    console.log('🔥 Using error.message:', error.message)
     return error.message
   } else {
+    console.log('🔥 Using fallback error message')
     return 'An unexpected error occurred'
   }
 }

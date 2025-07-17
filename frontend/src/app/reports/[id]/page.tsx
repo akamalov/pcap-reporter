@@ -98,11 +98,16 @@ function ReportViewPageContent() {
       if (error.response?.status === 404) {
         handleError('Report not found')
         // Don't redirect immediately, let user see the error
-        setTimeout(() => router.push('/reports'), 3000)
+        setTimeout(() => router.push('/reports'), 5000)
         return
       }
       handleError(error)
-      message.error(handleApiError(error))
+      // Show user-friendly error message
+      message.error({
+        content: handleApiError(error),
+        duration: 5,
+        style: { marginTop: '20vh' }
+      })
     } finally {
       setLoading(false)
       setRefreshing(false)
@@ -527,7 +532,7 @@ function ReportViewPageContent() {
                                 size="small"
                                 pagination={false}
                                 scroll={{ x: 800 }}
-                                rowKey={(record, index) => `tcp-conv-${index}`}
+                                rowKey={(record, index) => `tcp-conv-${record.src_ip}-${record.dst_ip}-${record.src_port}-${record.dst_port}-${index}`}
                                 aria-label="TCP conversations table"
                                 columns={[
                                   { 
@@ -704,7 +709,7 @@ function ReportViewPageContent() {
                             dataSource={report.security_analysis.suspicious_ips}
                             size="small"
                             pagination={{ pageSize: 10, showSizeChanger: false }}
-                            rowKey={(record, index) => `suspicious-ip-${index}`}
+                            rowKey={(record, index) => `suspicious-ip-${record.ip}-${index}`}
                             aria-label="Suspicious IP addresses table"
                             scroll={{ x: 600 }}
                             columns={[

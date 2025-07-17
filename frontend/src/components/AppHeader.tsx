@@ -30,13 +30,23 @@ export const AppHeader: React.FC<AppHeaderProps> = ({
   className = ""
 }) => {
   return (
-    <Header className={`bg-slate-800 shadow-lg ${className}`}>
+    <Header 
+      className={`bg-slate-800 shadow-lg ${className}`}
+      style={{ 
+        position: 'fixed', 
+        top: 0, 
+        left: 0, 
+        right: 0, 
+        zIndex: 1000,
+        height: '64px'
+      }}
+    >
       <div className="max-w-7xl mx-auto px-4 lg:px-6 flex items-center justify-between h-16">
         
         {/* Left side - Logo and title */}
         <div className="flex items-center space-x-3 min-w-0 flex-1">
           {showBackButton && (
-            <Link href={backUrl}>
+            <Link href={(backUrl || "/reports") as any}>
               <Button 
                 type="text" 
                 icon={<ArrowLeftOutlined />} 
