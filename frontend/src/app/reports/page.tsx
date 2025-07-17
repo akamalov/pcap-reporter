@@ -16,7 +16,7 @@ import {
   Tooltip,
   Dropdown,
   Modal,
-  message,
+  App,
   Progress,
   Statistic,
   DatePicker
@@ -64,6 +64,7 @@ const { RangePicker } = DatePicker
 
 export default function ReportsPage() {
   const router = useRouter()
+  const { message, modal } = App.useApp()
   const [reports, setReports] = useState<AnalysisJob[]>([])
   const [filteredReports, setFilteredReports] = useState<AnalysisJob[]>([])
   const [loading, setLoading] = useState(true)
@@ -129,7 +130,7 @@ export default function ReportsPage() {
 
   // Delete report
   const handleDelete = async (jobId: string) => {
-    Modal.confirm({
+    modal.confirm({
       title: 'Delete Report',
       content: 'Are you sure you want to delete this analysis report? This action cannot be undone.',
       icon: <ExclamationCircleOutlined />,
@@ -355,22 +356,22 @@ export default function ReportsPage() {
       />
 
       {/* Main Content */}
-      <Content className="bg-gray-50 p-6">
+      <Content className="bg-gray-50" style={{ paddingTop: 72 }}>
         <div className="max-w-7xl mx-auto">
           
           {/* Page Header */}
-          <div className="mb-6">
-            <Title level={2} className="mb-2">
-              Analysis Reports
+          <div className="max-w-7xl mx-auto px-4 lg:px-6 mb-6" style={{ marginTop: '13%' }}>
+            <Title level={2} className="mb-1" style={{ textAlign: 'left', marginLeft: 33 }}>
+              Analysis Reports Page
             </Title>
-            <Paragraph className="text-gray-600">
+            <Paragraph className="text-gray-600" style={{ marginLeft: 33 }}>
               View and manage all your PCAP analysis reports
             </Paragraph>
           </div>
 
           {/* Statistics Cards */}
-          <Row gutter={[16, 16]} className="mb-6">
-            <Col xs={12} sm={6}>
+          <Row gutter={[16, 16]} className="mb-6" style={{ marginTop: '2rem' }}>
+            <Col xs={24} sm={12} md={6}>
               <Card>
                 <Statistic
                   title="Total Reports"
@@ -379,7 +380,7 @@ export default function ReportsPage() {
                 />
               </Card>
             </Col>
-            <Col xs={12} sm={6}>
+            <Col xs={24} sm={12} md={6}>
               <Card>
                 <Statistic
                   title="Completed"
@@ -389,7 +390,7 @@ export default function ReportsPage() {
                 />
               </Card>
             </Col>
-            <Col xs={12} sm={6}>
+            <Col xs={24} sm={12} md={6}>
               <Card>
                 <Statistic
                   title="Processing"
@@ -399,7 +400,7 @@ export default function ReportsPage() {
                 />
               </Card>
             </Col>
-            <Col xs={12} sm={6}>
+            <Col xs={24} sm={12} md={6}>
               <Card>
                 <Statistic
                   title="Packets Analyzed"
@@ -474,7 +475,7 @@ export default function ReportsPage() {
             <Table
               columns={columns}
               dataSource={filteredReports}
-              rowKey="job_id"
+              rowKey={(record) => record.job_id || `report-${Date.now()}-${Math.random()}`}
               loading={loading}
               locale={{
                 emptyText: (
@@ -507,7 +508,7 @@ export default function ReportsPage() {
                 pageSizeOptions: ['10', '20', '50', '100'],
                 defaultPageSize: 20,
               }}
-              scroll={{ x: 'max-content' }}
+              scroll={{ x: 'max-content', y: 400 }}
               size="middle"
             />
           </Card>
