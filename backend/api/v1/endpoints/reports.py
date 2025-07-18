@@ -319,7 +319,7 @@ async def download_report_pdf(report_id: str) -> StreamingResponse:
         pdf_stream = BytesIO(pdf_bytes)
         
         return StreamingResponse(
-            BytesIO(pdf_bytes),
+            iter([pdf_bytes]),
             media_type="application/pdf",
             headers={
                 "Content-Disposition": f"attachment; filename={pdf_filename}",
@@ -424,7 +424,7 @@ def _convert_report_for_pdf(report_data: Dict[str, Any]) -> Dict[str, Any]:
             }
         
         # HTTP Analysis
-        if "http_analysis" in analysis_results:
+        if "http_analysis" in analysis_results and analysis_results["http_analysis"] is not None:
             http_data = analysis_results["http_analysis"]
             protocol_analysis["http"] = {
                 "total_requests": http_data.get("total_requests", 0),
@@ -437,7 +437,7 @@ def _convert_report_for_pdf(report_data: Dict[str, Any]) -> Dict[str, Any]:
             }
         
         # DNS Analysis
-        if "dns_analysis" in analysis_results:
+        if "dns_analysis" in analysis_results and analysis_results["dns_analysis"] is not None:
             dns_data = analysis_results["dns_analysis"]
             protocol_analysis["dns"] = {
                 "total_queries": dns_data.get("total_queries", 0),

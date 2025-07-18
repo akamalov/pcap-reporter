@@ -191,7 +191,8 @@ class PDFExportService:
             context['formatted_processing_time'] = self._format_duration(report_data['processing_time'])
         
         # Calculate protocol percentages
-        if 'protocols' in report_data and 'total_packets' in report_data:
+        if ('protocols' in report_data and report_data['protocols'] is not None and 
+            'total_packets' in report_data and report_data['total_packets'] is not None):
             context['protocol_percentages'] = self._calculate_protocol_percentages(
                 report_data['protocols'], report_data['total_packets']
             )
@@ -202,14 +203,16 @@ class PDFExportService:
                 context[f'formatted_{field}'] = self._format_timestamp(report_data[field])
         
         # Security summary
-        context['security_summary'] = self._prepare_security_summary(
-            report_data.get('security_analysis', {})
-        )
+        security_analysis = report_data.get('security_analysis', {})
+        if security_analysis is None:
+            security_analysis = {}
+        context['security_summary'] = self._prepare_security_summary(security_analysis)
         
         # Performance summary
-        context['performance_summary'] = self._prepare_performance_summary(
-            report_data.get('performance_metrics', {})
-        )
+        performance_metrics = report_data.get('performance_metrics', {})
+        if performance_metrics is None:
+            performance_metrics = {}
+        context['performance_summary'] = self._prepare_performance_summary(performance_metrics)
         
         return context
 
@@ -242,12 +245,13 @@ class PDFExportService:
 
     def _calculate_protocol_percentages(self, protocols: Dict[str, int], total_packets: int) -> Dict[str, float]:
         """Calculate percentage distribution of protocols."""
-        if total_packets == 0:
+        if not protocols or total_packets == 0 or total_packets is None:
             return {}
         
         return {
             protocol: (count / total_packets) * 100
             for protocol, count in protocols.items()
+            if count is not None
         }
 
     def _prepare_security_summary(self, security_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -397,6 +401,14 @@ class PDFExportService:
             .section {
                 margin-bottom: 25px;
                 page-break-inside: avoid;
+            }
+            
+            /* Special sections with 8% lower positioning */
+            .section.overview-section,
+            .section.protocol-analysis-section,
+            .section.network-diagrams-section {
+                margin-top: 8vh; /* 8% of viewport height */
+                padding-top: 20px;
             }
             
             .section h3 {
@@ -589,8 +601,14 @@ class PDFExportService:
         {% endif %}
     </div>
 
+    <!-- Overview Section -->
+    <div class="section overview-section">
+        <h3>Overview</h3>
+        <p>This report provides a comprehensive analysis of the PCAP file including traffic patterns, protocol distribution, and security findings. The analysis covers {{ report.total_packets|default(0) }} packets captured over {{ "%.2f"|format(report.duration|default(0)) }} seconds.</p>
+    </div>
+
     <!-- Protocol Analysis -->
-    <div class="section">
+    <div class="section protocol-analysis-section">
         <h3>Protocol Distribution</h3>
         {% if report.protocols %}
         <div class="protocol-list">
@@ -812,7 +830,7 @@ class PDFExportService:
 
     <!-- Network Diagrams -->
     {% if report.analysis_results and report.analysis_results.network_diagrams %}
-    <div class="section">
+    <div class="section network-diagrams-section">
         <h3>Network Diagrams</h3>
         <div class="diagram-note">
             <strong>Note:</strong> Network diagrams have been generated for this analysis including network topology, protocol flows, and security incidents. 

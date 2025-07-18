@@ -808,7 +808,9 @@ class AutomatedReportGenerator:
         content = []
         
         if PDF_AVAILABLE:
-            content.append(Paragraph("Technical Analysis Overview", self.styles['SectionHeader']))
+            # Overview section with 8% lower positioning
+            content.append(Spacer(1, int(0.08 * 842)))  # 8% of A4 height
+            content.append(Paragraph("Overview", self.styles['SectionHeader']))
             content.append(Spacer(1, 12))
             
             # Include protocol chart if available
@@ -917,6 +919,8 @@ class AutomatedReportGenerator:
         content = []
         
         if PDF_AVAILABLE:
+            # Protocol Analysis section with 8% lower positioning
+            content.append(Spacer(1, int(0.08 * 842)))  # 8% of A4 height
             content.append(Paragraph("Protocol Analysis", self.styles['SectionHeader']))
             content.append(Spacer(1, 12))
             
@@ -1174,7 +1178,8 @@ class AutomatedReportGenerator:
                         relevant_diagrams.append((diagram_type, mermaid_code))
             
             if relevant_diagrams:
-                content.append(Spacer(1, 20))
+                # Network Diagrams section with 8% lower positioning
+                content.append(Spacer(1, int(0.08 * 842)))  # 8% of A4 height
                 content.append(Paragraph("Network Diagrams", self.styles['SubsectionHeader']))
                 content.append(Spacer(1, 12))
                 

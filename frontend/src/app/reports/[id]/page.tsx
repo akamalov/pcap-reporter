@@ -351,7 +351,7 @@ function ReportViewPageContent() {
           </Card>
 
           {/* Main Content Tabs */}
-          <Card>
+          <Card className="report-sections-container">
             <Tabs 
               activeKey={activeTab} 
               onChange={setActiveTab} 

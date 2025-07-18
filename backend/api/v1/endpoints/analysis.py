@@ -77,6 +77,8 @@ async def submit_analysis_job_fixed(
         print("🔥 Instantiating validation service...")
         validation_service = ValidationService()
         print("🔥 Validation service instantiated successfully")
+        print(f"🔥 Validation service type: {type(validation_service)}")
+        print(f"🔥 Validation service methods: {[m for m in dir(validation_service) if 'validate' in m]}")
         
         # Extract client IP for security logging and audit trail
         print("🔥 Extracting client IP...")

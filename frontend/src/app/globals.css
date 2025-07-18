@@ -648,4 +648,51 @@ section {
 
 .dark .ant-picker:hover {
   border-color: #3b82f6;
+}
+
+/* Report page layout positioning - Move sections 12% lower */
+.report-sections-container {
+  margin-top: 12vh;
+  position: relative;
+  z-index: 1;
+}
+
+/* Ensure the tabs container gets the positioning */
+.ant-card .ant-tabs {
+  position: relative;
+}
+
+.ant-card .ant-tabs .ant-tabs-content {
+  margin-top: 12vh;
+  position: relative;
+}
+
+/* Alternative approach using padding for better responsive behavior */
+@media (min-width: 768px) {
+  .report-sections-container {
+    padding-top: 12vh;
+    margin-top: 0;
+  }
+}
+
+/* Ensure mobile compatibility */
+@media (max-width: 767px) {
+  .report-sections-container {
+    margin-top: 8vh;
+    padding-top: 0;
+  }
+}
+
+/* Analysis Report title positioning - Move 2% higher */
+.ant-layout-header .ant-typography h3,
+.ant-layout-header .ant-typography h4 {
+  margin-top: -2vh;
+  position: relative;
+}
+
+/* Specific targeting for Analysis Report title */
+.ant-layout-header .ant-typography h3[aria-label*="Analysis Report"],
+.ant-layout-header .ant-typography h4[aria-label*="Analysis Report"] {
+  margin-top: -2vh;
+  position: relative;
 } 
